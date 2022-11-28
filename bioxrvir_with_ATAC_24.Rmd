@@ -19,7 +19,7 @@ library(synapser)
 
 
 ```{r loop}
-synLogin('KlaraDewitte','Walhallah12') 
+synLogin('KlaraDewitte','Thesis2022') 
  
 # Obtain a pointer and download the RNA-seq level 1 data
 syn18508389 <- synGet(entity='syn18508389') 
