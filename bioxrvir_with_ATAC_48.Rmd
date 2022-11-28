@@ -1,5 +1,5 @@
 ---
-title: "Biorxiv data"
+title: "Biorxiv_with_ATAC_48"
 author: "Klara Dewitte"
 output: html_document
 ---
@@ -19,7 +19,8 @@ library(synapser)
 
 
 ```{r loop}
-synLogin('KlaraDewitte','Walhallah12') 
+# login of synapsr
+synLogin('KlaraDewitte','Thesis2022') 
  
 # Obtain a pointer and download the RNA-seq level 1 data
 syn18508389 <- synGet(entity='syn18508389') 
@@ -269,6 +270,5 @@ for(i in 1:length(all_data)){
   }
 }
 }
-
-
 ```
+
