@@ -3,9 +3,9 @@ library(tidyverse)
 library(dplyr)
 
 #load background NicheNet networks
-lr_network = readRDS(url("https://zenodo.org/record/3260758/files/lr_network.rds"))
-sig_network = readRDS(url("https://zenodo.org/record/3260758/files/signaling_network.rds"))
-gr_network = readRDS(url("https://zenodo.org/record/3260758/files/gr_network.rds"))
+lr_network = readRDS(url("https://zenodo.org/record/5884439/files/lr_network_human_21122021.rds"))
+sig_network = readRDS(url("https://zenodo.org/record/5884439/files/signaling_network_human_21122021.rds"))
+gr_network = readRDS(url("https://zenodo.org/record/5884439/files/gr_network_human_21122021.rds"))
 
 #Path to where your network files are stored
 path <- "C:/Users/klara/MaStat/Thesis/epiNN/Networks/"
