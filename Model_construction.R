@@ -4,9 +4,9 @@ library(dplyr)
 # in the NicheNet framework, ligand-target links are predicted based on collected biological knowledge on ligand-receptor, signaling and gene regulatory interactions
 
 # The complete networks can be downloaded from Zenodo
-lr_network = readRDS(url("https://zenodo.org/record/3260758/files/lr_network.rds"))
-sig_network = readRDS(url("https://zenodo.org/record/3260758/files/signaling_network.rds"))
-gr_network = readRDS(url("https://zenodo.org/record/3260758/files/gr_network.rds"))
+lr_network = readRDS(url("https://zenodo.org/record/5884439/files/lr_network_human_21122021.rds"))
+sig_network = readRDS(url("https://zenodo.org/record/5884439/files/signaling_network_human_21122021.rds"))
+gr_network = readRDS(url("https://zenodo.org/record/5884439/files/gr_network_human_21122021.rds"))
 
 matrix <- read.csv("C:/Users/klara/MaStat/Thesis/epiNN/Matrices/LIB180727LH_02_TGFb_24_S48_L006__001_ATAC_TF_TG.matrix", sep= "\t")
 
@@ -43,8 +43,8 @@ gr <- read.table("C:/Users/klara/MaStat/Thesis/epiNN/Matrices/Analysis/LIB180727
 gr_new <- gr[-c(which(gr$from == "")),]
 colnames(gr_new) <- c("to", "from", "source")
 
-lr_network = readRDS(url("https://zenodo.org/record/3260758/files/lr_network.rds"))
-sig_network = readRDS(url("https://zenodo.org/record/3260758/files/signaling_network.rds"))
+lr_network = readRDS(url("https://zenodo.org/record/5884439/files/lr_network_human_21122021.rds"))
+sig_network = readRDS(url("https://zenodo.org/record/5884439/files/signaling_network_human_21122021.rds"))
 path <- "C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_21_22/Matrices/Analysis"
 files <- list.files(path = path, pattern = '.matrix', full.names = TRUE)
 source_weights_df <- add_row(source_weights_df, source = "ReMap_2022", weight = 1)
