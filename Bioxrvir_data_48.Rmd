@@ -100,6 +100,7 @@ for(treatx in unique_values$cytokine){
     top_na_subset <- top_na[top_na$coef == treatx,]
     DE <- which(top_na_subset$FDR < 0.05 & abs(top_na_subset$logFC) > 2)
     DEgenes <- top_na_subset[DE,]
+    writexl::write_xlsx(DEgenes, path = paste0("DEgenes/", treatx, "_DEgenes_48.xlsx"))
         
     table2 <- list()
     table2$DEgenes <- DEgenes

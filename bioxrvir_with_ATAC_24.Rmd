@@ -136,7 +136,7 @@ designs <- append(designs, list(table1))
 ##Construction of ligand_target_matrix
 In GRN.R are the weighted networks and individual ligand-target-matrices constructed.
 ```{r ligand-target-matrix construction}
-path <- "C:/Users/klara/MaStat/Thesis/epiNN/new_GRN/"
+path <- "new_GRN/"
 files <- list.files(path = path, pattern = 'ligand_target.matrix', full.names = TRUE)
 matrices <- list()
 names_matrices <- list()

@@ -25,12 +25,12 @@ Get the RNAsesq data from Synapsr.
 synLogin('KlaraDewitte','Thesis2022') 
  
 # Obtain a pointer and download the RNA-seq level 1 data
-syn18508389 <- synGet(entity='syn18508389') 
+syn18508389 <- synGet(entity = 'syn18508389') 
 filepath_RNA <- syn18508389$path
 rawdata <- read.csv(filepath_RNA, row.names = 1)
 
 # Obtain pointer and download metadata
-ssyn15574180 <- synGet(entity='syn15574180') 
+ssyn15574180 <- synGet(entity = 'syn15574180') 
 filepath_metadata <- ssyn15574180$path
 metadata <- read.csv(filepath_metadata)
 
@@ -141,10 +141,16 @@ designs <- append(designs, list(table1))
 In GRN.R are the weighted networks and individual ligand-target-matrices constructed.
 ```{r ligand-target-matrix construction}
 # The complete networks can be downloaded from Zenodo
-lr_network = readRDS(url("https://zenodo.org/record/5884439/files/lr_network_human_21122021.rds"))
-sig_network = readRDS(url("https://zenodo.org/record/5884439/files/signaling_network_human_21122021.rds"))
-gr_network = readRDS(url("https://zenodo.org/record/5884439/files/gr_network_human_21122021.rds"))
-gr_network_LINCS = read.table("C:/Users/klara/MaStat/Thesis/epiNN/Ananse_networks/LINCS_MCF10A_TGFB_48_grn.txt", header = TRUE, sep = ";")
+lr_network <- readRDS(url("https://zenodo.org/record/5884439/files/lr_network_human_21122021.rds"))
+sig_network <- readRDS(url("https://zenodo.org/record/5884439/files/signaling_network_human_21122021.rds"))
+gr_network <- readRDS(url("https://zenodo.org/record/5884439/files/gr_network_human_21122021.rds"))
+gr_network_LINCS <- read.table("Ananse_networks/LINCS_MCF10A_TGFB_48_grn.txt", header = TRUE, sep = ";")
+test <- readRDS(unzip(url("https://zenodo.org/record/7418451/files/LINCS_MCF10A_EGF_48.network.txt.gz")))
+
+temp <- tempfile()
+download.file("http://www.newcl.org/data/zipfiles/a1.zip",temp)
+data <- read.table(unz(temp, "a1.dat"))
+unlink(temp)
 
 #add your new source to the weighted networks in NicheNet (weight??)
 new_network_weights_df <- tibble(source = "LINCS_MCF10A_TGFB_48", weight = 1)
