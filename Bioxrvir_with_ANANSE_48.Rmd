@@ -188,7 +188,7 @@ if(length(expression_settings_validation_DE_one) > 0){
   performances_one = settings_one %>% lapply(evaluate_target_prediction, ligand_target_matrix) %>% bind_rows() 
   designs[[1]]$performances_one <- as.data.frame(performances_one)
   
-  writexl::write_xlsx(performances_one, path = "NicheNet/performances_one_ANANSE_48.xlsx")
+  writexl::write_xlsx(performances_one, path = "NicheNet_output/performances_one_ANANSE_48.xlsx")
     
   # Visualize some classification evaluation metrics showing the target gene prediction performance
   performances_one = performances_one %>% dplyr::select(-aupr, -auc_iregulon,-pearson_log_pval,-spearman_log_pval , -sensitivity_roc, -specificity_roc) %>% gather(key = scorename, value = scorevalue, auroc:spearman)
