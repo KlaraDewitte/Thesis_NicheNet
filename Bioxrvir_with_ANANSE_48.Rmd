@@ -150,7 +150,6 @@ gr_network_LINCS_OSM <- read.delim("Ananse_networks/GRN/LINCS_MCF10A_OSM_48_NO_R
 gr_network_LINCS_HGF <- read.delim("Ananse_networks/GRN/LINCS_MCF10A_HGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 gr_network_LINCS_EGF <- read.delim("Ananse_networks/GRN/LINCS_MCF10A_EGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 
-
 #add your new source to the weighted networks in NicheNet (weight??)
 new_network_weights_df <- tibble(source = "LINCS_MCF10A", weight = 1)
 new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)

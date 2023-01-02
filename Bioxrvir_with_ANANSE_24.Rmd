@@ -145,69 +145,29 @@ lr_network <- readRDS(url("https://zenodo.org/record/5884439/files/lr_network_hu
 sig_network <- readRDS(url("https://zenodo.org/record/5884439/files/signaling_network_human_21122021.rds"))
 gr_network <- readRDS(url("https://zenodo.org/record/5884439/files/gr_network_human_21122021.rds"))
 
-
-gr_network_LINCS_OSM <- read.delim("Ananse_networks/LINCS_MCF10A_OSM_24_NO_RNAseq.network.txt", header = TRUE, sep = ";")
-gr_network_LINCS_HGF <- read.delim("Ananse_networks/LINCS_MCF10A_HGF_24_NO_RNAseq.network.txt", header = TRUE, sep = ";")
-gr_network_LINCS_EGF <- read.delim("Ananse_networks/LINCS_MCF10A_EGF_24_NO_RNAseq.network.txt", header = TRUE, sep = ";")
-
-temp <- tempfile()
-download.file("http://www.newcl.org/data/zipfiles/a1.zip",temp)
-data <- read.table(unz(temp, "a1.dat"))
-unlink(temp)
+#import one ligand GRN networks
+gr_network_LINCS_OSM <- read.delim("Ananse_networks/GRN/LINCS_MCF10A_OSM_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_HGF <- read.delim("Ananse_networks/GRN/LINCS_MCF10A_HGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_EGF <- read.delim("Ananse_networks/GRN/LINCS_MCF10A_EGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 
 #add your new source to the weighted networks in NicheNet (weight??)
-new_network_weights_df <- tibble(source = "LINCS_MCF10A_TGFB_24", weight = 1)
+new_network_weights_df <- tibble(source = "LINCS_MCF10A", weight = 1)
 new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
 
 #add LINCS GRN to default GRN NicheNet
-new_gr_network <- gr_network %>% bind_rows(gr_network_LINCS)
+new_gr_network <- gr_network %>% bind_rows(gr_network_LINCS_OSM) %>% bind_rows(gr_network_LINCS_HGF) %>% bind_rows(gr_network_LINCS_EGF)
 
 # aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
 weighted_networks = construct_weighted_networks(lr_network = lr_network, sig_network = sig_network, gr_network = new_gr_network, source_weights_df = new_source_weights_df)
 
-ligands <- list("EGF", "HGF", "OSM", "IFNG", "TGFB1", "BMP2")
+ligands <- list("EGF", "HGF", "OSM")
 
 ligand_target_matrix <- construct_ligand_target_matrix(weighted_networks = weighted_networks, ligands = ligands)
 ```
 
 ## Evaluation NicheNet
 # Transcriptional response prediction evaluation
-
 ```{r model evaluation, echo=TRUE, error=TRUE, warning=TRUE}
-# #all ligands
-# expression_settings_validation_DE <- designs[[1]]$expression_settings_validation_DE
-# if(length(expression_settings_validation_DE) > 0){
-#   #print(head(expression_settings_validation_DE))
-#   # Step 1: convert expression datasets to the required format to perform target gene prediction
-#   settings_all = expression_settings_validation_DE %>% lapply(convert_expression_settings_evaluation)
-#   settings_all = settings_all %>% discard(~length(.$from) > 1)
-#   designs[[1]]$settings_all <- settings_all
-#   #print(names(which(settings$response)))
-#     
-#   # Step 2: calculate the target gene prediction performances
-#   performances_all = settings_all %>% lapply(evaluate_target_prediction, ligand_target_matrix) %>% bind_rows() 
-#   designs[[1]]$performances_all <- as.data.frame(performances_all)
-#   writexl::write_xlsx(performances_all, path = "NicheNet_output/performances_all_ANANSE_24.xlsx")
-#     
-#   # Visualize some classification evaluation metrics showing the target gene prediction performance
-#   performances_all = performances_all %>% dplyr::select(-aupr, -auc_iregulon,-pearson_log_pval,-spearman_log_pval ,-sensitivity_roc, -specificity_roc) %>% gather(key = scorename, value = scorevalue, auroc:spearman)
-#   scorelabels = c(auroc = "AUROC", aupr_corrected = "AUPR (corrected)", auc_iregulon_corrected = "AUC-iRegulon (corrected)", 
-#                   pearson = "Pearson correlation", spearman = "Spearman's rank correlation", 
-#                   mean_rank_GST_log_pval = "Mean-rank gene-set enrichment")
-#   scorerandom = c(auroc = 0.5, aupr_corrected = 0, auc_iregulon_corrected = 0, pearson = 0, spearman = 0,mean_rank_GST_log_pval = 0) %>% data.frame(scorevalue = .) %>% rownames_to_column("scorename")
-#     
-#   print(performances_all %>%
-#           mutate(model = "NicheNet") %>%
-#           ggplot() +
-#           geom_violin(aes(model, scorevalue, group=model, fill = model)) +
-#           geom_boxplot(aes(model, scorevalue, group = model),width = 0.05) +
-#           scale_y_continuous("Score target prediction") +
-#           facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
-#           geom_hline(aes(yintercept =scorevalue), data=scorerandom, linetype = 2, color = "red") +
-#           theme_bw()
-#   )
-# }
-
 #one ligand (EGF, HGF, OSM)
 expression_settings_validation_DE_one <- list(designs[[1]]$expression_settings_validation_DE$EGF,
                                 designs[[1]]$expression_settings_validation_DE$HGF,
@@ -226,6 +186,7 @@ if(length(expression_settings_validation_DE_one) > 0){
   # Step 2: calculate the target gene prediction performances
   performances_one = settings_one %>% lapply(evaluate_target_prediction, ligand_target_matrix) %>% bind_rows() 
   designs[[1]]$performances_one <- as.data.frame(performances_one)
+  
   writexl::write_xlsx(performances_one, path = "NicheNet_output/performances_one_ANANSE_24.xlsx")
     
   # Visualize some classification evaluation metrics showing the target gene prediction performance
@@ -238,57 +199,21 @@ if(length(expression_settings_validation_DE_one) > 0){
   print(performances_one %>%
           mutate(model = "NicheNet") %>%
           ggplot() +
-          geom_violin(aes(model, scorevalue, group = model, fill = model)) +
+          geom_violin(aes(model, scorevalue, group=model, fill = model)) +
           geom_boxplot(aes(model, scorevalue, group = model),width = 0.05) +
           scale_y_continuous("Score target prediction") +
           facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
           geom_hline(aes(yintercept =scorevalue), data=scorerandom, linetype = 2, color = "red") +
-          theme_bw()
+          theme_bw() +
+          ggtitle("48h with ANANSE data only one ligand")
   )
 }
 
 ```
 
-# Ligand activity prediction evaluation
+# ligand activity prediction evaluation
 
 ```{r ligand activity prediction evaluation, echo=TRUE, error=TRUE}
-# #all ligands added
-# settings_all <- designs[[1]]$settings_all
-# 
-# if(length(settings_all) > 0){
-#    # convert expression datasets to correct format for ligand activity prediction
-#    all_ligands = settings_all %>% extract_ligands_from_settings(combination = FALSE) %>% unlist()
-#    settings_ligand_prediction_all = settings_all %>% convert_settings_ligand_prediction(all_ligands = all_ligands, validation = TRUE)
-#     
-#   # infer ligand importances: for all ligands of interest, we assess how well a ligand explains the differential expression in a specific dataset (and we do this for all datasets).
-#   ligand_importances_all = settings_ligand_prediction_all %>% lapply(get_single_ligand_importances, ligand_target_matrix) %>% bind_rows()
-#   ligand_importances_all <- do.call(data.frame, lapply(ligand_importances_all, function(value) replace(value, is.infinite(value), 100000)))
-#   
-#     # Look at predictive performance of single/individual importance measures to predict ligand activity: of all ligands tested, the ligand that is truly active in a dataset should get the highest activity score (i.e. best target gene prediction performance)
-#   evaluation_ligand_prediction_all = ligand_importances_all$setting %>% unique() %>% lapply(function(x){x}) %>% 
-#       lapply(wrapper_evaluate_single_importances_ligand_prediction, ligand_importances_all) %>%
-#       bind_rows() %>% inner_join(ligand_importances_all %>% distinct(setting, ligand))
-#    writexl::write_xlsx(evaluation_ligand_prediction_all, path = "NicheNet_output/ligand_all_ANANSE_24.xlsx")
-#     
-#    # Visualize some classification evaluation metrics showing the ligand activity prediction performance
-#    evaluation_ligand_prediction_all = evaluation_ligand_prediction_all %>% dplyr::select(-aupr, -sensitivity_roc, -specificity_roc, -pearson, -spearman, -mean_rank_GST_log_pval) %>% gather(key = scorename, value = scorevalue, auroc:aupr_corrected)
-#     scorelabels = c(auroc = "AUROC", aupr_corrected = "AUPR (corrected)")
-#     scorerandom = c(auroc = 0.5, aupr_corrected = 0) %>% data.frame(scorevalue = .) %>% rownames_to_column("scorename")
-#     
-#   print(evaluation_ligand_prediction_all %>%
-#      filter(importance_measure %in% c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson",
-#                                       "spearman")) %>%
-#      ggplot() +
-#      geom_violin(aes(importance_measure, scorevalue, group=importance_measure, fill = importance_measure)) +
-#      geom_boxplot(aes(importance_measure, scorevalue, group = importance_measure),width = 0.1) +
-#      scale_y_continuous("Evaluation ligand activity prediction") +
-#      scale_x_discrete("Ligand activity measure") +
-#      facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
-#      geom_hline(aes(yintercept=scorevalue), data = scorerandom, linetype = 2, color = "red") +
-#      theme_bw() +
-#      theme(axis.text.x = element_text(angle = 90)))
-# }
-
 #one ligand
 designs[[1]]$settings_one <- settings_one
 names(settings_one) <- names_one
@@ -307,8 +232,7 @@ if(length(settings_one) > 0){
     lapply(wrapper_evaluate_single_importances_ligand_prediction, ligand_importances_one) %>%
     bind_rows() %>% inner_join(ligand_importances_one %>% distinct(setting, ligand))
    
-   print(evaluation_ligand_prediction_one, caption = "Evaluation ligand prediction one")
-   writexl::write_xlsx(evaluation_ligand_prediction_one, path = "NicheNet_output/ligand_one_ANANSE_24.xlsx")
+  writexl::write_xlsx(evaluation_ligand_prediction_one, path = "NicheNet_output/ligand_one_ANANSE_24.xlsx")
     
   # Visualize some classification evaluation metrics showing the ligand activity prediction performance
   evaluation_ligand_prediction_one = evaluation_ligand_prediction_one %>% dplyr::select(-aupr, -sensitivity_roc, -specificity_roc,
@@ -329,7 +253,8 @@ if(length(settings_one) > 0){
     facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
     geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 90)))
+    theme(axis.text.x = element_text(angle = 90))) +
+    ggtitle("48h with ANANSE data only one ligand")
   }
 
 ```
