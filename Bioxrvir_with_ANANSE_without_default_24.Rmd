@@ -1,4 +1,10 @@
 ---
+title: "Bioxrvrir with ANANSE without default 24"
+author: "Klara Dewitte"
+date: "2023-01-03"
+output: html_document
+---
+---
 title: "Bioxrvir_with_ANANSE_24"
 author: "Klara Dewitte"
 date: "2022-11-28"
@@ -155,7 +161,7 @@ new_network_weights_df <- tibble(source = "LINCS_MCF10A", weight = 1)
 new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
 
 #add LINCS GRN to default GRN NicheNet
-new_gr_network <- gr_network %>% bind_rows(gr_network_LINCS_OSM) %>% bind_rows(gr_network_LINCS_HGF) %>% bind_rows(gr_network_LINCS_EGF)
+new_gr_network <- gr_network_LINCS_OSM %>% bind_rows(gr_network_LINCS_HGF) %>% bind_rows(gr_network_LINCS_EGF)
 
 # aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
 weighted_networks = construct_weighted_networks(lr_network = lr_network, sig_network = sig_network, gr_network = new_gr_network, source_weights_df = new_source_weights_df)
@@ -187,13 +193,17 @@ if(length(expression_settings_validation_DE_one) > 0){
   performances_one = settings_one %>% lapply(evaluate_target_prediction, ligand_target_matrix) %>% bind_rows() 
   designs[[1]]$performances_one <- as.data.frame(performances_one)
   
-  writexl::write_xlsx(performances_one, path = "NicheNet_output/performances_one_ANANSE_24.xlsx")
+  writexl::write_xlsx(performances_one, path = "NicheNet_output/performances_one_ANANSE_without_default_24.xlsx")
     
   # Visualize some classification evaluation metrics showing the target gene prediction performance
-  performances_one = performances_one %>% dplyr::select(-aupr, -auc_iregulon,-pearson_log_pval,-spearman_log_pval , -sensitivity_roc, -specificity_roc) %>% gather(key = scorename, value = scorevalue, auroc:spearman)
+  performances_one = performances_one %>% dplyr::select(-aupr, -auc_iregulon, -pearson_log_pval, -spearman_log_pval,
+                                                        -sensitivity_roc, -specificity_roc) %>% 
+                      gather(key = scorename,value = scorevalue, auroc:spearman)
+  
   scorelabels = c(auroc = "AUROC", aupr_corrected = "AUPR (corrected)", auc_iregulon_corrected = "AUC-iRegulon (corrected)", 
                   pearson = "Pearson correlation", spearman = "Spearman's rank correlation", 
                   mean_rank_GST_log_pval = "Mean-rank gene-set enrichment")
+  
   scorerandom = c(auroc = 0.5, aupr_corrected = 0, auc_iregulon_corrected = 0, pearson = 0, spearman = 0, mean_rank_GST_log_pval = 0) %>% data.frame(scorevalue = .) %>% rownames_to_column("scorename")
     
   print(performances_one %>%
@@ -205,7 +215,7 @@ if(length(expression_settings_validation_DE_one) > 0){
           facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
           geom_hline(aes(yintercept =scorevalue), data=scorerandom, linetype = 2, color = "red") +
           theme_bw() +
-          ggtitle("24h with ANANSE data only one ligand")
+          ggtitle("24h with ANANSE data only one ligand without default GRN")
   )
 }
 
@@ -232,7 +242,7 @@ if(length(settings_one) > 0){
     lapply(wrapper_evaluate_single_importances_ligand_prediction, ligand_importances_one) %>%
     bind_rows() %>% inner_join(ligand_importances_one %>% distinct(setting, ligand))
    
-  writexl::write_xlsx(evaluation_ligand_prediction_one, path = "NicheNet_output/ligand_one_ANANSE_24.xlsx")
+  writexl::write_xlsx(evaluation_ligand_prediction_one, path = "NicheNet_output/ligand_one_ANANSE_without_default_24.xlsx")
     
   # Visualize some classification evaluation metrics showing the ligand activity prediction performance
   evaluation_ligand_prediction_one = evaluation_ligand_prediction_one %>% dplyr::select(-aupr, -sensitivity_roc, -specificity_roc,
@@ -254,7 +264,7 @@ if(length(settings_one) > 0){
     geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 90))) +
-    ggtitle("24h with ANANSE data only one ligand")
+    ggtitle("24h with ANANSE data only one ligand without default GRN")
   }
 
 ```
