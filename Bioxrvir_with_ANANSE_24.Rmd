@@ -80,12 +80,13 @@ for (treat in colnames(design)[-1]){
 }
    
 # Add gene names
-IDtoSymbol_matrix <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"), filters = "ensembl_gene_id", values = unique(res$Gene), mart = ensembl)
+IDtoSymbol_matrix <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"), filters = "ensembl_gene_id", 
+                           values = unique(res$Gene), mart = ensembl)
 top_table <- merge(res, IDtoSymbol_matrix, by.x = 'Gene', by.y = 'ensembl_gene_id', all.x = TRUE)
     
 # Omit all the genes with NA or an empty name
 top_na <- na.omit(top_table) 
-top_na <- top_na[!(top_na$external_gene_name==""),]
+top_na <- top_na[!(top_na$external_gene_name == ""),]
     
 # Select DE genes and make expression_settings_validation for evaluation NicheNet
 total <- c()
@@ -168,6 +169,7 @@ ligand_target_matrix <- construct_ligand_target_matrix(weighted_networks = weigh
 ## Evaluation NicheNet
 # Transcriptional response prediction evaluation
 ```{r model evaluation, echo=TRUE, error=TRUE, warning=TRUE}
+ligand_target_matrix <- readRDS(url("https://zenodo.org/record/5884439/files/ligand_target_matrix_nsga2r_final.rds"))
 #one ligand (EGF, HGF, OSM)
 expression_settings_validation_DE_one <- list(designs[[1]]$expression_settings_validation_DE$EGF,
                                 designs[[1]]$expression_settings_validation_DE$HGF,
@@ -199,11 +201,11 @@ if(length(expression_settings_validation_DE_one) > 0){
   print(performances_one %>%
           mutate(model = "NicheNet") %>%
           ggplot() +
-          geom_violin(aes(model, scorevalue, group=model, fill = model)) +
-          geom_boxplot(aes(model, scorevalue, group = model),width = 0.05) +
+          geom_violin(aes(model, scorevalue, group = model, fill = model)) +
+          geom_boxplot(aes(model, scorevalue, group = model), width = 0.05) +
           scale_y_continuous("Score target prediction") +
-          facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
-          geom_hline(aes(yintercept =scorevalue), data=scorerandom, linetype = 2, color = "red") +
+          facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
+          geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
           theme_bw() +
           ggtitle("24h with ANANSE data only one ligand")
   )

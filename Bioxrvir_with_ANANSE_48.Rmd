@@ -58,7 +58,7 @@ ensembl <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", mi
 # Get treatment groups for 48h
 Treat <- sapply(str_split(metadata_subset_48$specimenName, "_"), function(k) k[1])
 Treat <- Treat %>% factor %>% relevel(ref = "PBS")
-    
+
 # Create design matrix
 design <- model.matrix(~ Treat)
 rownames(design) <- metadata_subset_48$specimenName
@@ -135,7 +135,33 @@ for(treatx in unique_values$cytokine){
 names(DE_info) <- total
 table1$DE_info <- DE_info
 designs <- append(designs, list(table1))
+
+
+ggplot(rawdata_subset_48) +
+  geom_histogram(aes(x = sid18), stat = "bin", bins = 200) +
+  xlab("Raw expression counts") +
+  ylab("Number of genes") 
+
+ggplot(rawdata_subset_48) +
+  geom_histogram(aes(x = sid111), stat = "bin", bins = 200) +
+  xlab("Raw expression counts") +
+  ylab("Number of genes") 
+
+mean_counts <- apply(rawdata_subset_48[,1:3], 1, mean)       
+variance_counts <- apply(rawdata_subset_48[,1:3], 1, var)
+df <- data.frame(mean_counts, variance_counts)
+
+ggplot(df) +
+        geom_point(aes(x = mean_counts, y = variance_counts)) + 
+        scale_y_log10(limits = c(1, 1e9)) +
+        scale_x_log10(limits = c(1, 1e9)) +
+        geom_abline(intercept = 0, slope = 1, color = "red")
+
+table(gr_network_LINCS_OSM$to %in% table1$DE_info$OSM$external_gene_name)
+table(gr_network_LINCS_EGF$to %in% table1$DE_info$EGF$external_gene_name)
+table(gr_network_LINCS_HGF$to %in% table1$DE_info$HGF$external_gene_name)
 ```
+
 
 ##Construction of ligand_target_matrix
 In GRN.R are the weighted networks and individual ligand-target-matrices constructed.
