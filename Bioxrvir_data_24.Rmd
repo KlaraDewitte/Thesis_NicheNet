@@ -133,6 +133,10 @@ names(DE_info) <- total
 table1$DE_info <- DE_info
 designs <- append(designs, list(table1))
 
+table(gr_network_LINCS_OSM$to %in% table1$DE_info$OSM$external_gene_name)
+table(gr_network_LINCS_EGF$to %in% table1$DE_info$EGF$external_gene_name)
+table(gr_network_LINCS_HGF$to %in% table1$DE_info$HGF$external_gene_name)
+
 ```
 ## Evaluation NicheNet
 # Transcriptional response prediction evaluation
@@ -205,10 +209,10 @@ if(length(expression_settings_validation_DE_one) > 0){
           mutate(model = "NicheNet") %>%
           ggplot() +
           geom_violin(aes(model, scorevalue, group = model, fill = model)) +
-          geom_boxplot(aes(model, scorevalue, group = model),width = 0.05) +
+          geom_boxplot(aes(model, scorevalue, group = model), width = 0.05) +
           scale_y_continuous("Score target prediction") +
-          facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
-          geom_hline(aes(yintercept =scorevalue), data=scorerandom, linetype = 2, color = "red") +
+          facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
+          geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
           theme_bw()
   )
 }
