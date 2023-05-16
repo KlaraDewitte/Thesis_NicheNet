@@ -1,0 +1,12 @@
+Files included in this repository:
+Model evaluation NicheNet of the bioxrvir data without ATAC data (24h and 48h)
+    - Bioxrvir_data_24
+    - Bioxrvir_data_48
+  
+For second ATAC data generated
+Generate ligand-target matrices from ATAC-seq data
+    - GRN.R
+  
+Model evaluation NicheNet 
+    - New_ANANSE_24_GRN: script for 24h
+    - New_ANANSE_48_GRN: script for 48h
