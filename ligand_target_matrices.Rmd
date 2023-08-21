@@ -1,0 +1,351 @@
+---
+title: "NO RNA seq ANANSE"
+author: "Klara Dewitte"
+date: "2023-08-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(nichenetr)
+library(dplyr)
+```
+
+```{r NicheNet default networks}
+# NicheNet default networks
+lr_network <- readRDS(url("https://zenodo.org/record/7074291/files/lr_network_human_21122021.rds"))
+sig_network <- readRDS(url("https://zenodo.org/record/7074291/files/signaling_network_human_21122021.rds"))
+gr_network <- readRDS(url("https://zenodo.org/record/7074291/files/gr_network_human_21122021.rds"))
+ligand_target_matrix <- readRDS(url("https://zenodo.org/record/7074291/files/ligand_target_matrix_nsga2r_final.rds"))
+```
+
+```{r ligand-target-matrix construction EGF NO RNA, echo=TRUE}
+#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
+gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+
+#add your new source to the weighted networks in NicheNet 
+new_network_weights_df <- tibble(
+  source = "LINCS_MCF10A_EGF_24", 
+  avg_weight = 1, 
+  median_weight = 1)
+
+new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
+
+#add LINCS GRN to default GRN NicheNet
+new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_EGF)
+
+# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
+weighted_networks_total <- construct_weighted_networks(
+  lr_network = lr_network, 
+  sig_network = sig_network, 
+  gr_network = new_gr_network_total, 
+  source_weights_df = new_source_weights_df %>%
+    dplyr::select(source, avg_weight) %>%
+    rename(weight = avg_weight))
+
+# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
+
+weighted_networks_total <- apply_hub_corrections(
+  weighted_networks = weighted_networks_total,
+  lr_sig_hub = hyperparameter_list %>%
+    filter(parameter == "lr_sig_hub") %>%
+    pull(avg_weight),
+  gr_hub = hyperparameter_list %>%
+    filter(parameter == "gr_hub") %>%
+    pull(avg_weight))
+
+ligands <- list("EGF")
+
+
+ligand_target_matrix_total <- construct_ligand_target_matrix(
+  weighted_networks = weighted_networks_total, 
+  ligands = ligands, algorithm = "PPR",
+  damping_factor = hyperparameter_list %>% 
+    filter(parameter == "damping_factor") %>% 
+    pull(avg_weight),
+  ltf_cutoff = hyperparameter_list %>% 
+    filter(parameter == "ltf_cutoff") %>% 
+    pull(avg_weight))
+
+
+## plotting regulatory potentials in front of each other
+ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
+plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 24 hour")
+
+```
+
+```{r ligand-target-matrix construction OSM NO RNA, echo=TRUE}
+#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
+gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+
+#add your new source to the weighted networks in NicheNet 
+new_network_weights_df <- tibble(
+  source = "LINCS_MCF10A_OSM_24", 
+  avg_weight = 1, 
+  median_weight = 1)
+
+new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
+
+#add LINCS GRN to default GRN NicheNet
+new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_OSM)
+
+# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
+weighted_networks_total <- construct_weighted_networks(
+  lr_network = lr_network, 
+  sig_network = sig_network, 
+  gr_network = new_gr_network_total, 
+  source_weights_df = new_source_weights_df %>%
+    dplyr::select(source, avg_weight) %>%
+    rename(weight = avg_weight))
+
+# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
+
+weighted_networks_total <- apply_hub_corrections(
+  weighted_networks = weighted_networks_total,
+  lr_sig_hub = hyperparameter_list %>%
+    filter(parameter == "lr_sig_hub") %>%
+    pull(avg_weight),
+  gr_hub = hyperparameter_list %>%
+    filter(parameter == "gr_hub") %>%
+    pull(avg_weight))
+
+ligands <- list("OSM")
+
+
+ligand_target_matrix_total <- construct_ligand_target_matrix(
+  weighted_networks = weighted_networks_total, 
+  ligands = ligands, algorithm = "PPR",
+  damping_factor = hyperparameter_list %>% 
+    filter(parameter == "damping_factor") %>% 
+    pull(avg_weight),
+  ltf_cutoff = hyperparameter_list %>% 
+    filter(parameter == "ltf_cutoff") %>% 
+    pull(avg_weight))
+
+
+## plotting regulatory potentials in front of each other
+ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
+plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
+
+```
+
+```{r ligand-target-matrix construction HGF NO RNA, echo=TRUE}
+#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
+gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+
+#add your new source to the weighted networks in NicheNet 
+new_network_weights_df <- tibble(
+  source = "LINCS_MCF10A_HGF_24", 
+  avg_weight = 1, 
+  median_weight = 1)
+
+new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
+
+#add LINCS GRN to default GRN NicheNet
+new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_HGF) 
+
+# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
+weighted_networks_total <- construct_weighted_networks(
+  lr_network = lr_network, 
+  sig_network = sig_network, 
+  gr_network = new_gr_network_total, 
+  source_weights_df = new_source_weights_df %>%
+    dplyr::select(source, avg_weight) %>%
+    rename(weight = avg_weight))
+
+# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
+
+weighted_networks_total <- apply_hub_corrections(
+  weighted_networks = weighted_networks_total,
+  lr_sig_hub = hyperparameter_list %>%
+    filter(parameter == "lr_sig_hub") %>%
+    pull(avg_weight),
+  gr_hub = hyperparameter_list %>%
+    filter(parameter == "gr_hub") %>%
+    pull(avg_weight))
+
+ligands <- list("HGF")
+
+
+ligand_target_matrix_total <- construct_ligand_target_matrix(
+  weighted_networks = weighted_networks_total, 
+  ligands = ligands, algorithm = "PPR",
+  damping_factor = hyperparameter_list %>% 
+    filter(parameter == "damping_factor") %>% 
+    pull(avg_weight),
+  ltf_cutoff = hyperparameter_list %>% 
+    filter(parameter == "ltf_cutoff") %>% 
+    pull(avg_weight))
+
+
+## plotting regulatory potentials in front of each other
+ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
+plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
+
+```
+
+```{r ligand-target-matrix construction EGF RNA, echo=TRUE}
+#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
+gr_network_LINCS_EGF_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_grn.txt", header = TRUE, sep = ";")
+
+#add your new source to the weighted networks in NicheNet 
+new_network_weights_df <- tibble(
+  source = "LINCS_MCF10A_EGF_24", 
+  avg_weight = 1, 
+  median_weight = 1)
+
+new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
+
+#add LINCS GRN to default GRN NicheNet
+new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_EGF_RNA)
+
+# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
+weighted_networks_total <- construct_weighted_networks(
+  lr_network = lr_network, 
+  sig_network = sig_network, 
+  gr_network = new_gr_network_total, 
+  source_weights_df = new_source_weights_df %>%
+    dplyr::select(source, avg_weight) %>%
+    rename(weight = avg_weight))
+
+# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
+
+weighted_networks_total <- apply_hub_corrections(
+  weighted_networks = weighted_networks_total,
+  lr_sig_hub = hyperparameter_list %>%
+    filter(parameter == "lr_sig_hub") %>%
+    pull(avg_weight),
+  gr_hub = hyperparameter_list %>%
+    filter(parameter == "gr_hub") %>%
+    pull(avg_weight))
+
+ligands <- list("EGF")
+
+
+ligand_target_matrix_total <- construct_ligand_target_matrix(
+  weighted_networks = weighted_networks_total, 
+  ligands = ligands, algorithm = "PPR",
+  damping_factor = hyperparameter_list %>% 
+    filter(parameter == "damping_factor") %>% 
+    pull(avg_weight),
+  ltf_cutoff = hyperparameter_list %>% 
+    filter(parameter == "ltf_cutoff") %>% 
+    pull(avg_weight))
+
+
+## plotting regulatory potentials in front of each other
+ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
+plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 24 hour")
+
+```
+
+```{r ligand-target-matrix construction OSM RNA, echo=TRUE}
+#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
+gr_network_LINCS_OSM_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_grn.txt", header = TRUE, sep = ";")
+
+#add your new source to the weighted networks in NicheNet 
+new_network_weights_df <- tibble(
+  source = "LINCS_MCF10A_OSM_24", 
+  avg_weight = 1, 
+  median_weight = 1)
+
+new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
+
+#add LINCS GRN to default GRN NicheNet
+new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_OSM_RNA)
+
+# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
+weighted_networks_total <- construct_weighted_networks(
+  lr_network = lr_network, 
+  sig_network = sig_network, 
+  gr_network = new_gr_network_total, 
+  source_weights_df = new_source_weights_df %>%
+    dplyr::select(source, avg_weight) %>%
+    rename(weight = avg_weight))
+
+# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
+
+weighted_networks_total <- apply_hub_corrections(
+  weighted_networks = weighted_networks_total,
+  lr_sig_hub = hyperparameter_list %>%
+    filter(parameter == "lr_sig_hub") %>%
+    pull(avg_weight),
+  gr_hub = hyperparameter_list %>%
+    filter(parameter == "gr_hub") %>%
+    pull(avg_weight))
+
+ligands <- list("OSM")
+
+
+ligand_target_matrix_total <- construct_ligand_target_matrix(
+  weighted_networks = weighted_networks_total, 
+  ligands = ligands, algorithm = "PPR",
+  damping_factor = hyperparameter_list %>% 
+    filter(parameter == "damping_factor") %>% 
+    pull(avg_weight),
+  ltf_cutoff = hyperparameter_list %>% 
+    filter(parameter == "ltf_cutoff") %>% 
+    pull(avg_weight))
+
+
+## plotting regulatory potentials in front of each other
+ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
+plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
+
+```
+
+```{r ligand-target-matrix construction HGF RNA, echo=TRUE}
+#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
+gr_network_LINCS_HGF_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_grn.txt", header = TRUE, sep = ";")
+
+#add your new source to the weighted networks in NicheNet 
+new_network_weights_df <- tibble(
+  source = "LINCS_MCF10A_HGF_24", 
+  avg_weight = 1, 
+  median_weight = 1)
+
+new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
+
+#add LINCS GRN to default GRN NicheNet
+new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_HGF_RNA) 
+
+# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
+weighted_networks_total <- construct_weighted_networks(
+  lr_network = lr_network, 
+  sig_network = sig_network, 
+  gr_network = new_gr_network_total, 
+  source_weights_df = new_source_weights_df %>%
+    dplyr::select(source, avg_weight) %>%
+    rename(weight = avg_weight))
+
+# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
+
+weighted_networks_total <- apply_hub_corrections(
+  weighted_networks = weighted_networks_total,
+  lr_sig_hub = hyperparameter_list %>%
+    filter(parameter == "lr_sig_hub") %>%
+    pull(avg_weight),
+  gr_hub = hyperparameter_list %>%
+    filter(parameter == "gr_hub") %>%
+    pull(avg_weight))
+
+ligands <- list("HGF")
+
+
+ligand_target_matrix_total <- construct_ligand_target_matrix(
+  weighted_networks = weighted_networks_total, 
+  ligands = ligands, algorithm = "PPR",
+  damping_factor = hyperparameter_list %>% 
+    filter(parameter == "damping_factor") %>% 
+    pull(avg_weight),
+  ltf_cutoff = hyperparameter_list %>% 
+    filter(parameter == "ltf_cutoff") %>% 
+    pull(avg_weight))
+
+
+## plotting regulatory potentials in front of each other
+ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
+plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
+
+
+
+```
