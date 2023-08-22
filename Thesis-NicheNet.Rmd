@@ -21,6 +21,7 @@ library(knitr)
 library(ggstatsplot)
 library(cowplot)
 library(annotables)
+library(viridis)
 memory.limit(size = 3000000)
 knitr::opts_chunk$set(error = TRUE)
 ```
@@ -427,6 +428,115 @@ plots
 
 
 
+
+# Create a list of plots for different metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Create a list of plots for different metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Create a list of plots for different metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+plots
+
+# Create a list of plots for different metrics
+
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+plots
+
+
+# Create a list of plots for different metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "none")  # Adjust legend position as needed
+
+# Add the legend in the middle of the combined plots
+combined_plots_with_legend <- combined_plots +
+  theme(legend.position = "center")
+
+combined_plots_with_legend +
+  plot_layout(widths = c(20), heights = c(20))
+combined_plots_with_legend
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("NicheNet.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
+
+
+
 evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
     lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
     bind_rows() %>% inner_join(ligand_importances %>% distinct(setting,ligand))
@@ -469,14 +579,14 @@ performances %>%
     plot.margin = margin(1, 1, 1, 1, "cm")
   )
 ```
-
+##### 24 ######
 ## Check 6: Run an updated NN validation with the ATAC GRN
 Can we boost the performance if we now add the GRN that we have? We will create for each ligand an updated set of RPs that needs to be integrated in the ligand_target_matrix.
 
 ##Construction of ligand_target_matrix
 First run GRN.R, there the weighted networks and individual ligand-target matrices are constructed. Load here the GRN networks constructed with ANANANSE
 In GRN.R are the weighted networks and individual ligand-target-matrices constructed.
-```{r ligand-target-matrix construction 1, echo=TRUE}
+```{r ligand-target-matrix construction 24 NO_RNA_seq, echo=TRUE}
 #import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
 gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
@@ -543,24 +653,19 @@ ligand_target_matrix_total <- construct_ligand_target_matrix(
 
 ## plotting regulatory potentials in front of each other
 ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
-plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 24 hour")
-png("RP_EGF_24_NO_RNA_Seq.png")
+
 # Create the plot
 plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"],
      xlab = "NicheNet default regulatory potentials",
      ylab = "Regulatory potentials with ATAC",
      main = "Regulatory potentials EGF 24 hour")
-# Save and close the PNG device
-dev.off()
 
 
-png("RP_HGF_24_NO_RNA_Seq.png")
+
+
 plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
-dev.off()
 
-png("RP_OSM_24_NO_RNA_Seq.png")
 plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
-dev.off()
 ```
 
 ```{r ATAC performances 1}
@@ -604,6 +709,11 @@ settings_ligand_prediction_ATAC <- settings %>% convert_settings_ligand_predicti
 # infer ligand importances: for all ligands of interest, we assess how well a ligand explains the differential expression in a specific datasets (and we do this for all datasets).
 ligand_importances_ATAC <- settings_ligand_prediction_ATAC %>% lapply(get_single_ligand_importances, ligand_target_matrix_ATAC_3) %>% bind_rows()
 
+# Look at predictive performance of single/individual importance measures to predict ligand activity: of all ligands tested, the ligand that is truly active in a dataset should get the highest activity score (i.e. best target gene prediction performance)
+
+# Replace infinite values with 10000
+ligand_importances <- ligand_importances %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
+
 # Get available metrics from the data
 exclude_columns <- c("setting", "test_ligand", "ligand")
 metrics <- colnames(ligand_importances_ATAC)[!(colnames(ligand_importances_ATAC) %in% exclude_columns)]
@@ -612,7 +722,7 @@ plots <- lapply(metrics, function(metric) {
   ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
     geom_boxplot() +
     geom_jitter(data = ligand_importances_ATAC, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste("Metric:", metric),
+    labs(title = paste(metric),
          x = "Setting",
          y = metric) +
     theme_minimal() +
@@ -620,26 +730,39 @@ plots <- lapply(metrics, function(metric) {
 })
 plots
 
-# Look at predictive performance of single/individual importance measures to predict ligand activity: of all ligands tested, the ligand that is truly active in a dataset should get the highest activity score (i.e. best target gene prediction performance)
 
-# Replace infinite values with 10000
-ligand_importances <- ligand_importances %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
-
-# Get available metrics from the data
-exclude_columns <- c("setting", "test_ligand", "ligand")
-metrics <- colnames(ligand_importances)[!(colnames(ligand_importances) %in% exclude_columns)]
-
+# Create a list of plots for different metrics
 plots <- lapply(metrics, function(metric) {
-  ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
     geom_boxplot() +
     geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste("Metric:", metric),
-         x = "Setting",
+    labs(title = paste(metric),
+         x = " ",
          y = metric) +
+    scale_color_discrete() +
     theme_minimal() +
-    scale_color_discrete()  # Add color scale legend
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
 })
-plots
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "none")  # Adjust legend position as needed
+
+# Add the legend in the middle of the combined plots
+combined_plots_with_legend <- combined_plots +
+  theme(legend.position = "center")
+
+combined_plots_with_legend +
+  plot_layout(widths = c(20), heights = c(20))
+combined_plots_with_legend
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("NicheNet with ATAC NO RNA seq 24.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
 
 evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
     lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
@@ -658,7 +781,7 @@ evaluation_ligand_prediction %>%
   scale_y_continuous("Evaluation ligand activity prediction") +
   scale_x_discrete("Ligand activity measure") +
   facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
-  geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
+  geom_hline(aes(yintercept=scorevalue), data = scorerandom, linetype = 2, color = "red") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
 ```
@@ -731,22 +854,15 @@ ligand_target_matrix_total_RNA <- construct_ligand_target_matrix(
 ## plotting regulatory potentials in front of each other
 
 ligand_target_matrix_ATAC_4 <-  subset(ligand_target_matrix_total_RNA, rownames(ligand_target_matrix_total_RNA) %in% rownames(ligand_target_matrix))
+
 plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_4[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 24 hour")
-png("RP_EGF_24_RNA_Seq.png")
-plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_4[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 24 hour")
-dev.off()
 
 plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_4[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
 
-png("RP_HGF_24_RNA_Seq.png")
-plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_4[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
-dev.off()
 
 
 plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_4[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
-png("RP_OSM_24_RNA_Seq.png")
-plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_4[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
-dev.off()
+p
 
 ```
 
@@ -813,6 +929,40 @@ plots <- lapply(metrics, function(metric) {
 })
 plots
 
+
+# Create a list of plots for different metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "none")  # Adjust legend position as needed
+
+# Add the legend in the middle of the combined plots
+combined_plots_with_legend <- combined_plots +
+  theme(legend.position = "center")
+
+combined_plots_with_legend +
+  plot_layout(widths = c(20), heights = c(20))
+combined_plots_with_legend
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("NicheNet with ATAC RNA seq 24.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
+
 evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
     lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
     bind_rows() %>% inner_join(ligand_importances %>% distinct(setting, ligand))
@@ -836,20 +986,43 @@ evaluation_ligand_prediction %>%
 ```
 
 
-```{r ligand-target-matrix construction EGF 1, echo=TRUE}
+##### 48 ######
+## Check 6: Run an updated NN validation with the ATAC GRN
+Can we boost the performance if we now add the GRN that we have? We will create for each ligand an updated set of RPs that needs to be integrated in the ligand_target_matrix.
+
+##Construction of ligand_target_matrix
+First run GRN.R, there the weighted networks and individual ligand-target matrices are constructed. Load here the GRN networks constructed with ANANANSE
+In GRN.R are the weighted networks and individual ligand-target-matrices constructed.
+```{r ligand-target-matrix construction 48 NO_RNA_seq, echo=TRUE}
 #import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+
+
+targets.GRN_OSM <- unique(gr_network_LINCS_OSM $to)
+targets.GRN_EGF <- unique(gr_network_LINCS_EGF $to)
+targets.GRN_HGF <- unique(gr_network_LINCS_HGF $to)
+
+length(targets.GRN_OSM)
+length(targets.GRN_EGF)
+length(targets.GRN_HGF)
+
+length(intersect(targets.NN, targets.GRN_OSM))
+length(intersect(targets.NN, targets.GRN_EGF))
+length(intersect(targets.NN, targets.GRN_HGF))
 
 #add your new source to the weighted networks in NicheNet 
 new_network_weights_df <- tibble(
-  source = "LINCS_MCF10A_EGF_24", 
+  source = "LINCS_MCF10A_EGF_48", 
   avg_weight = 1, 
   median_weight = 1)
 
 new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
 
 #add LINCS GRN to default GRN NicheNet
-new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_EGF)
+new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_OSM) %>% bind_rows(gr_network_LINCS_HGF) %>%
+  bind_rows(gr_network_LINCS_EGF)
 
 # aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
 weighted_networks_total <- construct_weighted_networks(
@@ -871,7 +1044,7 @@ weighted_networks_total <- apply_hub_corrections(
     filter(parameter == "gr_hub") %>%
     pull(avg_weight))
 
-ligands <- list("EGF")
+ligands <- list("EGF", "HGF", "OSM")
 
 
 ligand_target_matrix_total <- construct_ligand_target_matrix(
@@ -887,37 +1060,185 @@ ligand_target_matrix_total <- construct_ligand_target_matrix(
 
 ## plotting regulatory potentials in front of each other
 ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
-plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 24 hour")
 
+# Create the plot
+plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"],
+     xlab = "NicheNet default regulatory potentials",
+     ylab = "Regulatory potentials with ATAC",
+     main = "Regulatory potentials EGF 48 hour")
+
+
+
+
+plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 48 hour")
+
+plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 48 hour")
 ```
 
-```{r ligand-target-matrix construction OSM 1, echo=TRUE}
+```{r ATAC performances 48}
+# so some increase, but over the entire spectrum
+
+# Evaluate transcriptional response prediction on every dataset
+# shrink the data set for easy use
+settings <- settings[-c(2:6)]
+performances_ATAC <- settings %>% lapply(evaluate_target_prediction, ligand_target_matrix_total) %>% bind_rows()
+# Visualize some classification evaluation metrics showing the target gene prediction performance
+performances_ATAC <- performances_ATAC %>% dplyr::select(-aupr, -auc_iregulon,-pearson_log_pval,-spearman_log_pval ,-sensitivity_roc, -specificity_roc) %>% gather(key = scorename, value = scorevalue, auroc:spearman)
+scorelabels <- c(auroc="AUROC", aupr_corrected="AUPR (corrected)", auc_iregulon_corrected = "AUC-iRegulon (corrected)",pearson = "Pearson correlation", spearman = "Spearman's rank correlation",mean_rank_GST_log_pval = "Mean-rank gene-set enrichment")
+
+scorerandom <- c(auroc=0.5, aupr_corrected=0, auc_iregulon_corrected = 0, pearson = 0, spearman = 0,mean_rank_GST_log_pval = 0) %>% data.frame(scorevalue=.) %>% rownames_to_column("scorename")
+
+performances_ATAC %>%
+  mutate(model = "NicheNet v2") %>%
+  ggplot() +
+  geom_violin(aes(model, scorevalue, group=model, fill = model)) +
+  geom_boxplot(aes(model, scorevalue, group = model),width = 0.05) +
+  scale_y_continuous("Score target prediction") +
+  facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
+  geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
+  theme_bw()
+
+performances_ATAC %>%
+  mutate(model = "NicheNet v2") %>%
+  ggplot() +
+  geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
+  geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), alpha = 0.7) +
+  scale_y_continuous("Score target prediction") +
+  facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
+  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
+  theme_bw()
+
+
+# How good are the ligand activities?
+all_ligands_ATAC <- settings %>% extract_ligands_from_settings(combination = FALSE) %>% unlist()
+settings_ligand_prediction_ATAC <- settings %>% convert_settings_ligand_prediction(all_ligands = all_ligands_ATAC, validation = TRUE)
+
+# infer ligand importances: for all ligands of interest, we assess how well a ligand explains the differential expression in a specific datasets (and we do this for all datasets).
+ligand_importances_ATAC <- settings_ligand_prediction_ATAC %>% lapply(get_single_ligand_importances, ligand_target_matrix_ATAC_3) %>% bind_rows()
+
+# Look at predictive performance of single/individual importance measures to predict ligand activity: of all ligands tested, the ligand that is truly active in a dataset should get the highest activity score (i.e. best target gene prediction performance)
+
+# Replace infinite values with 10000
+ligand_importances <- ligand_importances %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
+
+# Get available metrics from the data
+exclude_columns <- c("setting", "test_ligand", "ligand")
+metrics <- colnames(ligand_importances_ATAC)[!(colnames(ligand_importances_ATAC) %in% exclude_columns)]
+
+plots <- lapply(metrics, function(metric) {
+  ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances_ATAC, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = "Setting",
+         y = metric) +
+    theme_minimal() +
+    scale_color_discrete()  # Add color scale legend
+})
+plots
+
+
+
+# Create a list of plots for different metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "none")  # Adjust legend position as needed
+
+# Add the legend in the middle of the combined plots
+combined_plots_with_legend <- combined_plots +
+  theme(legend.position = "center")
+
+combined_plots_with_legend +
+  plot_layout(widths = c(20), heights = c(20))
+combined_plots_with_legend
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("NicheNet with ATAC NO RNA seq 48.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
+
+
+evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
+    lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
+    bind_rows() %>% inner_join(ligand_importances %>% distinct(setting,ligand))
+
+# Visualize some classification evaluation metrics showing the ligand activity prediction performance
+evaluation_ligand_prediction <- evaluation_ligand_prediction %>% dplyr::select(-aupr, -sensitivity_roc, -specificity_roc, -pearson, -spearman, -mean_rank_GST_log_pval) %>% gather(key = scorename, value = scorevalue, auroc:aupr_corrected)
+scorelabels <- c(auroc="AUROC", aupr_corrected="AUPR (corrected)")
+scorerandom <- c(auroc=0.5, aupr_corrected=0) %>% data.frame(scorevalue=.) %>% rownames_to_column("scorename")
+
+evaluation_ligand_prediction %>%
+ filter(importance_measure %in% c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")) %>%
+  ggplot() +
+  geom_violin(aes(importance_measure, scorevalue, group=importance_measure, fill = importance_measure)) +
+  geom_boxplot(aes(importance_measure, scorevalue, group = importance_measure),width = 0.1) +
+  scale_y_continuous("Evaluation ligand activity prediction") +
+  scale_x_discrete("Ligand activity measure") +
+  facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
+  geom_hline(aes(yintercept=scorevalue), data = scorerandom, linetype = 2, color = "red") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+
+```{r ligand-target-matrix construction 48 with RNA, echo=TRUE}
 #import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_OSM_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_48_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_HGF_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_48_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_EGF_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_48_grn.txt", header = TRUE, sep = ";")
+
+#look into overlap target genes and target genes NicheNet
+targets.GRN_OSM_RNA <- unique(gr_network_LINCS_OSM_RNA$to)
+targets.GRN_EGF_RNA <- unique(gr_network_LINCS_EGF_RNA$to)
+targets.GRN_HGF_RNA <- unique(gr_network_LINCS_HGF_RNA$to)
+
+length(targets.GRN_OSM_RNA)
+length(targets.GRN_EGF_RNA)
+length(targets.GRN_HGF_RNA)
+
+length(intersect(targets.NN, targets.GRN_OSM_RNA))
+length(intersect(targets.NN, targets.GRN_EGF_RNA))
+length(intersect(targets.NN, targets.GRN_HGF_RNA))
 
 #add your new source to the weighted networks in NicheNet 
 new_network_weights_df <- tibble(
-  source = "LINCS_MCF10A_OSM_24", 
+  source = "LINCS_MCF10A_48", 
   avg_weight = 1, 
   median_weight = 1)
 
 new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
 
 #add LINCS GRN to default GRN NicheNet
-new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_OSM)
+new_gr_network_total_RNA <- gr_network %>% bind_rows(gr_network_LINCS_OSM_RNA) %>% bind_rows(gr_network_LINCS_HGF_RNA) %>%
+  bind_rows(gr_network_LINCS_EGF_RNA)
 
 # aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
-weighted_networks_total <- construct_weighted_networks(
+weighted_networks_total_RNA <- construct_weighted_networks(
   lr_network = lr_network, 
   sig_network = sig_network, 
-  gr_network = new_gr_network_total, 
+  gr_network = new_gr_network_total_RNA, 
   source_weights_df = new_source_weights_df %>%
     dplyr::select(source, avg_weight) %>%
     rename(weight = avg_weight))
 
 # downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
 
-weighted_networks_total <- apply_hub_corrections(
+weighted_networks_total_RNA <- apply_hub_corrections(
   weighted_networks = weighted_networks_total,
   lr_sig_hub = hyperparameter_list %>%
     filter(parameter == "lr_sig_hub") %>%
@@ -926,11 +1247,11 @@ weighted_networks_total <- apply_hub_corrections(
     filter(parameter == "gr_hub") %>%
     pull(avg_weight))
 
-ligands <- list("OSM")
+ligands <- list("EGF", "HGF", "OSM")
 
 
-ligand_target_matrix_total <- construct_ligand_target_matrix(
-  weighted_networks = weighted_networks_total, 
+ligand_target_matrix_total_RNA <- construct_ligand_target_matrix(
+  weighted_networks = weighted_networks_total_RNA, 
   ligands = ligands, algorithm = "PPR",
   damping_factor = hyperparameter_list %>% 
     filter(parameter == "damping_factor") %>% 
@@ -939,234 +1260,137 @@ ligand_target_matrix_total <- construct_ligand_target_matrix(
     filter(parameter == "ltf_cutoff") %>% 
     pull(avg_weight))
 
-
 ## plotting regulatory potentials in front of each other
-ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
-plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
+
+ligand_target_matrix_ATAC_4 <-  subset(ligand_target_matrix_total_RNA, rownames(ligand_target_matrix_total_RNA) %in% rownames(ligand_target_matrix))
+
+plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_4[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 48 hour")
+
+plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_4[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 48 hour")
+
+
+
+plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_4[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 48 hour")
 
 ```
 
-```{r ligand-target-matrix construction HGF 1, echo=TRUE}
-#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_grn.txt", header = TRUE, sep = ";")
+```{r ATAC performances 48 with RNA}
+# so some increase, but over the entire spectrum
 
-#add your new source to the weighted networks in NicheNet 
-new_network_weights_df <- tibble(
-  source = "LINCS_MCF10A_HGF_24", 
-  avg_weight = 1, 
-  median_weight = 1)
+# Evaluate transcriptional response prediction on every dataset
+# shrink the data set for easy use
+settings <- settings[-c(2:6)]
+performances_ATAC <- settings %>% lapply(evaluate_target_prediction, ligand_target_matrix_total_RNA) %>% bind_rows()
+# Visualize some classification evaluation metrics showing the target gene prediction performance
+performances_ATAC <- performances_ATAC %>% dplyr::select(-aupr, -auc_iregulon,-pearson_log_pval,-spearman_log_pval ,-sensitivity_roc, -specificity_roc) %>% gather(key = scorename, value = scorevalue, auroc:spearman)
+scorelabels <- c(auroc="AUROC", aupr_corrected="AUPR (corrected)", auc_iregulon_corrected = "AUC-iRegulon (corrected)",pearson = "Pearson correlation", spearman = "Spearman's rank correlation",mean_rank_GST_log_pval = "Mean-rank gene-set enrichment")
 
-new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
+scorerandom <- c(auroc=0.5, aupr_corrected=0, auc_iregulon_corrected = 0, pearson = 0, spearman = 0,mean_rank_GST_log_pval = 0) %>% data.frame(scorevalue=.) %>% rownames_to_column("scorename")
 
-#add LINCS GRN to default GRN NicheNet
-new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_HGF) 
-
-# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
-weighted_networks_total <- construct_weighted_networks(
-  lr_network = lr_network, 
-  sig_network = sig_network, 
-  gr_network = new_gr_network_total, 
-  source_weights_df = new_source_weights_df %>%
-    dplyr::select(source, avg_weight) %>%
-    rename(weight = avg_weight))
-
-# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
-
-weighted_networks_total <- apply_hub_corrections(
-  weighted_networks = weighted_networks_total,
-  lr_sig_hub = hyperparameter_list %>%
-    filter(parameter == "lr_sig_hub") %>%
-    pull(avg_weight),
-  gr_hub = hyperparameter_list %>%
-    filter(parameter == "gr_hub") %>%
-    pull(avg_weight))
-
-ligands <- list("HGF")
+performances_ATAC %>%
+  mutate(model = "NicheNet v2") %>%
+  ggplot() +
+  geom_violin(aes(model, scorevalue, group=model, fill = model)) +
+  geom_boxplot(aes(model, scorevalue, group = model),width = 0.05) +
+  scale_y_continuous("Score target prediction") +
+  facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
+  geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
+  theme_bw()
 
 
-ligand_target_matrix_total <- construct_ligand_target_matrix(
-  weighted_networks = weighted_networks_total, 
-  ligands = ligands, algorithm = "PPR",
-  damping_factor = hyperparameter_list %>% 
-    filter(parameter == "damping_factor") %>% 
-    pull(avg_weight),
-  ltf_cutoff = hyperparameter_list %>% 
-    filter(parameter == "ltf_cutoff") %>% 
-    pull(avg_weight))
+performances_ATAC %>%
+  mutate(model = "NicheNet v2") %>%
+  ggplot() +
+  geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
+  geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), alpha = 0.7) +
+  scale_y_continuous("Score target prediction") +
+  facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
+  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
+  theme_bw()
 
 
-## plotting regulatory potentials in front of each other
-ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
-plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
+# How good are the ligand activities?
+all_ligands_ATAC <- settings %>% extract_ligands_from_settings(combination = FALSE) %>% unlist()
+settings_ligand_prediction_ATAC <- settings %>% convert_settings_ligand_prediction(all_ligands = all_ligands_ATAC, validation = TRUE)
 
+# infer ligand importances: for all ligands of interest, we assess how well a ligand explains the differential expression in a specific datasets (and we do this for all datasets).
+ligand_importances_ATAC <- settings_ligand_prediction_ATAC %>% lapply(get_single_ligand_importances, ligand_target_matrix_ATAC_4) %>% bind_rows()
 
+# Look at predictive performance of single/individual importance measures to predict ligand activity: of all ligands tested, the ligand that is truly active in a dataset should get the highest activity score (i.e. best target gene prediction performance)
 
+# Replace infinite values with 10000
+ligand_importances <- ligand_importances_ATAC %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
+
+# Get available metrics from the data
+exclude_columns <- c("setting", "test_ligand", "ligand")
+metrics <- colnames(ligand_importances_ATAC)[!(colnames(ligand_importances_ATAC) %in% exclude_columns)]
+
+plots <- lapply(metrics, function(metric) {
+  ggplot(ligand_importances_ATAC, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances_ATAC, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste("Metric:", metric),
+         x = "Setting",
+         y = metric) +
+    theme_minimal() +
+    scale_color_discrete()  # Add color scale legend
+})
+plots
+
+# Create a list of plots for different metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = paste(metric),
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
+    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "none")  # Adjust legend position as needed
+
+# Add the legend in the middle of the combined plots
+combined_plots_with_legend <- combined_plots +
+  theme(legend.position = "center")
+
+combined_plots_with_legend +
+  plot_layout(widths = c(20), heights = c(20))
+combined_plots_with_legend
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("NicheNet with ATAC RNA seq 48.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
+
+evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
+    lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
+    bind_rows() %>% inner_join(ligand_importances %>% distinct(setting, ligand))
+
+# Visualize some classification evaluation metrics showing the ligand activity prediction performance
+evaluation_ligand_prediction <- evaluation_ligand_prediction %>% dplyr::select (-aupr, -sensitivity_roc, -specificity_roc, -pearson, -spearman, -mean_rank_GST_log_pval) %>% gather(key = scorename, value = scorevalue, auroc:aupr_corrected)
+scorelabels <- c(auroc="AUROC", aupr_corrected="AUPR (corrected)")
+scorerandom <- c(auroc=0.5, aupr_corrected=0) %>% data.frame(scorevalue=.) %>% rownames_to_column("scorename")
+
+evaluation_ligand_prediction %>%
+ filter(importance_measure %in% c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")) %>%
+  ggplot() +
+  geom_violin(aes(importance_measure, scorevalue, group=importance_measure, fill = importance_measure)) +
+  geom_boxplot(aes(importance_measure, scorevalue, group = importance_measure),width = 0.1) +
+  scale_y_continuous("Evaluation ligand activity prediction") +
+  scale_x_discrete("Ligand activity measure") +
+  facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
+  geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90))
 ```
 
-
-```{r ligand-target-matrix construction EGF, echo=TRUE}
-#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-
-#add your new source to the weighted networks in NicheNet 
-new_network_weights_df <- tibble(
-  source = "LINCS_MCF10A_EGF_24", 
-  avg_weight = 1, 
-  median_weight = 1)
-
-new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
-
-#add LINCS GRN to default GRN NicheNet
-new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_EGF)
-
-# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
-weighted_networks_total <- construct_weighted_networks(
-  lr_network = lr_network, 
-  sig_network = sig_network, 
-  gr_network = new_gr_network_total, 
-  source_weights_df = new_source_weights_df %>%
-    dplyr::select(source, avg_weight) %>%
-    rename(weight = avg_weight))
-
-# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
-
-weighted_networks_total <- apply_hub_corrections(
-  weighted_networks = weighted_networks_total,
-  lr_sig_hub = hyperparameter_list %>%
-    filter(parameter == "lr_sig_hub") %>%
-    pull(avg_weight),
-  gr_hub = hyperparameter_list %>%
-    filter(parameter == "gr_hub") %>%
-    pull(avg_weight))
-
-ligands <- list("EGF")
-
-
-ligand_target_matrix_total <- construct_ligand_target_matrix(
-  weighted_networks = weighted_networks_total, 
-  ligands = ligands, algorithm = "PPR",
-  damping_factor = hyperparameter_list %>% 
-    filter(parameter == "damping_factor") %>% 
-    pull(avg_weight),
-  ltf_cutoff = hyperparameter_list %>% 
-    filter(parameter == "ltf_cutoff") %>% 
-    pull(avg_weight))
-
-
-## plotting regulatory potentials in front of each other
-ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
-plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials EGF 24 hour")
-
-```
-
-```{r ligand-target-matrix construction OSM, echo=TRUE}
-#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-
-#add your new source to the weighted networks in NicheNet 
-new_network_weights_df <- tibble(
-  source = "LINCS_MCF10A_OSM_24", 
-  avg_weight = 1, 
-  median_weight = 1)
-
-new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
-
-#add LINCS GRN to default GRN NicheNet
-new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_OSM)
-
-# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
-weighted_networks_total <- construct_weighted_networks(
-  lr_network = lr_network, 
-  sig_network = sig_network, 
-  gr_network = new_gr_network_total, 
-  source_weights_df = new_source_weights_df %>%
-    dplyr::select(source, avg_weight) %>%
-    rename(weight = avg_weight))
-
-# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
-
-weighted_networks_total <- apply_hub_corrections(
-  weighted_networks = weighted_networks_total,
-  lr_sig_hub = hyperparameter_list %>%
-    filter(parameter == "lr_sig_hub") %>%
-    pull(avg_weight),
-  gr_hub = hyperparameter_list %>%
-    filter(parameter == "gr_hub") %>%
-    pull(avg_weight))
-
-ligands <- list("OSM")
-
-
-ligand_target_matrix_total <- construct_ligand_target_matrix(
-  weighted_networks = weighted_networks_total, 
-  ligands = ligands, algorithm = "PPR",
-  damping_factor = hyperparameter_list %>% 
-    filter(parameter == "damping_factor") %>% 
-    pull(avg_weight),
-  ltf_cutoff = hyperparameter_list %>% 
-    filter(parameter == "ltf_cutoff") %>% 
-    pull(avg_weight))
-
-
-## plotting regulatory potentials in front of each other
-ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
-plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
-
-```
-
-```{r ligand-target-matrix construction HGF, echo=TRUE}
-#import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-
-#add your new source to the weighted networks in NicheNet 
-new_network_weights_df <- tibble(
-  source = "LINCS_MCF10A_HGF_24", 
-  avg_weight = 1, 
-  median_weight = 1)
-
-new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
-
-#add LINCS GRN to default GRN NicheNet
-new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_HGF) 
-
-# aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
-weighted_networks_total <- construct_weighted_networks(
-  lr_network = lr_network, 
-  sig_network = sig_network, 
-  gr_network = new_gr_network_total, 
-  source_weights_df = new_source_weights_df %>%
-    dplyr::select(source, avg_weight) %>%
-    rename(weight = avg_weight))
-
-# downweigh the importance of signaling and gene regulatory hubs - use the optimized parameters of this
-
-weighted_networks_total <- apply_hub_corrections(
-  weighted_networks = weighted_networks_total,
-  lr_sig_hub = hyperparameter_list %>%
-    filter(parameter == "lr_sig_hub") %>%
-    pull(avg_weight),
-  gr_hub = hyperparameter_list %>%
-    filter(parameter == "gr_hub") %>%
-    pull(avg_weight))
-
-ligands <- list("HGF")
-
-
-ligand_target_matrix_total <- construct_ligand_target_matrix(
-  weighted_networks = weighted_networks_total, 
-  ligands = ligands, algorithm = "PPR",
-  damping_factor = hyperparameter_list %>% 
-    filter(parameter == "damping_factor") %>% 
-    pull(avg_weight),
-  ltf_cutoff = hyperparameter_list %>% 
-    filter(parameter == "ltf_cutoff") %>% 
-    pull(avg_weight))
-
-
-## plotting regulatory potentials in front of each other
-ligand_target_matrix_ATAC_3 <-  subset(ligand_target_matrix_total, rownames(ligand_target_matrix_total) %in% rownames(ligand_target_matrix))
-plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
-
-```
 
 
