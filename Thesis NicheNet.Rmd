@@ -374,7 +374,7 @@ performances %>%
   geom_boxplot(aes(model, scorevalue, group = model), width = 0.05) +
   scale_y_continuous("Score target prediction") +
   facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
-  geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
+  geom_hline(aes(yintercept=scorevalue), data = scorerandom, linetype = 2, color = "red") +
   theme_bw()
 
 #visualisation individual points
@@ -439,20 +439,26 @@ evaluation_ligand_prediction %>%
 
 ## Adapted visualisation for thesis
 metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")
+my_colors <- c("red", "blue", "green")
 
 # Create a list of plots for specific metrics
 plots <- lapply(metrics, function(metric) {
   p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
     geom_boxplot() +
-    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7,  size = 1.5) +
     labs(title = metric,
          x = " ",
          y = metric) +
-    scale_color_discrete() +
+    scale_color_manual(values = my_colors) + 
     theme_minimal() +
-    theme(plot.title = element_text(size = 14, hjust = 0.5),
+    theme(plot.title = element_text(size = 12, hjust = 0.5),
           plot.margin = margin(1, 1, 1, 1, "cm"),
-          legend.position = "none") +
+          legend.position = "none",
+      axis.title = element_text(size = 14),  
+      axis.text = element_text(size = 10),   
+      axis.ticks = element_line(size = 1),  #
+      strip.text = element_text(size = 12),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
     theme(legend.title = element_blank(), legend.text = element_text(size = 12))
   
   p
@@ -460,18 +466,11 @@ plots <- lapply(metrics, function(metric) {
 
 # Combine plots using the patchwork package
 combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
-
-# Display the combined plots with a single legend
-combined_plots +
-  theme(legend.position = "bottom",  # Place the legend at the bottom
-        legend.box = "vertical",     # Arrange legend items vertically
-        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "bottom")  # Adjust legend margin
 
 # Save the combined plots with the overall title in the middle and a single legend
-ggsave("ligand_activity_NicheNet.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
-
-
+ggsave("ligand_activity_NicheNet.png", plot = combined_plots, width = 13, height = 12, dpi = 300)
 ```
 ##### 24 ######
 ## Check 6: Run an updated NN validation with the ATAC GRN
@@ -482,21 +481,29 @@ First run GRN.R, there the weighted networks and individual ligand-target matric
 In GRN.R are the weighted networks and individual ligand-target-matrices constructed.
 ```{r ligand-target-matrix construction 24 NO_RNA_seq, echo=TRUE}
 #import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_OSM_24 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_HGF_24 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_EGF_24 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 
-targets.GRN_OSM <- unique(gr_network_LINCS_OSM $to)
-targets.GRN_EGF <- unique(gr_network_LINCS_EGF $to)
-targets.GRN_HGF <- unique(gr_network_LINCS_HGF $to)
+targets.GRN_OSM_24 <- unique(gr_network_LINCS_OSM_24$to)
+targets.GRN_EGF_24 <- unique(gr_network_LINCS_EGF_24$to)
+targets.GRN_HGF_24 <- unique(gr_network_LINCS_HGF_24$to)
 
-length(targets.GRN_OSM)
-length(targets.GRN_EGF)
-length(targets.GRN_HGF)
+table(filtered_de.genes$EGF_24h$diffexp$gene %in% gr_network_LINCS_EGF_24$to)
+table(filtered_de.genes$OSM_24h$diffexp$gene %in% gr_network_LINCS_OSM_24$to)
+table(filtered_de.genes$HGF_24h$diffexp$gene %in% gr_network_LINCS_HGF_24$to)
 
-length(intersect(targets.NN, targets.GRN_OSM))
-length(intersect(targets.NN, targets.GRN_EGF))
-length(intersect(targets.NN, targets.GRN_HGF))
+length(unique(gr_network_LINCS_EGF_24$to)) - (table(filtered_de.genes$EGF_24h$diffexp$gene %in% gr_network_LINCS_EGF_24$to)["TRUE"])
+length(unique(gr_network_LINCS_OSM_24$to)) - (table(filtered_de.genes$OSM_24h$diffexp$gene %in% gr_network_LINCS_OSM_24$to)["TRUE"])
+length(unique(gr_network_LINCS_HGF_24$to)) - (table(filtered_de.genes$HGF_24h$diffexp$gene %in% gr_network_LINCS_HGF_24$to)["TRUE"])
+
+length(targets.GRN_OSM_24)
+length(targets.GRN_EGF_24)
+length(targets.GRN_HGF_24)
+
+length(intersect(targets.NN, targets.GRN_OSM_24))
+length(intersect(targets.NN, targets.GRN_EGF_24))
+length(intersect(targets.NN, targets.GRN_HGF_24))
 
 #add your new source to the weighted networks in NicheNet 
 new_network_weights_df <- tibble(
@@ -507,14 +514,14 @@ new_network_weights_df <- tibble(
 new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
 
 #add LINCS GRN to default GRN NicheNet
-new_gr_network_total <- gr_network %>% bind_rows(gr_network_LINCS_OSM) %>% bind_rows(gr_network_LINCS_HGF) %>%
-  bind_rows(gr_network_LINCS_EGF)
+new_gr_network_total_24 <- gr_network %>% bind_rows(gr_network_LINCS_OSM_24) %>% bind_rows(gr_network_LINCS_HGF_24) %>%
+  bind_rows(gr_network_LINCS_EGF_24)
 
 # aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
 weighted_networks_total <- construct_weighted_networks(
   lr_network = lr_network, 
   sig_network = sig_network, 
-  gr_network = new_gr_network_total, 
+  gr_network = new_gr_network_total_24, 
   source_weights_df = new_source_weights_df %>%
     dplyr::select(source, avg_weight) %>%
     rename(weight = avg_weight))
@@ -645,15 +652,20 @@ metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_
 plots <- lapply(metrics, function(metric) {
   p <- ggplot(ligand_importances_ATAC, aes(x = setting, y = .data[[metric]])) +
     geom_boxplot() +
-    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7,  size = 1.5) +
     labs(title = metric,
          x = " ",
          y = metric) +
-    scale_color_discrete() +
+    scale_color_manual(values = my_colors) + 
     theme_minimal() +
-    theme(plot.title = element_text(size = 14, hjust = 0.5),
+    theme(plot.title = element_text(size = 12, hjust = 0.5),
           plot.margin = margin(1, 1, 1, 1, "cm"),
-          legend.position = "none") +
+          legend.position = "none",
+      axis.title = element_text(size = 14),  
+      axis.text = element_text(size = 10),   
+      axis.ticks = element_line(size = 1),  #
+      strip.text = element_text(size = 12),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
     theme(legend.title = element_blank(), legend.text = element_text(size = 12))
   
   p
@@ -661,37 +673,40 @@ plots <- lapply(metrics, function(metric) {
 
 # Combine plots using the patchwork package
 combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
-
-# Display the combined plots with a single legend
-combined_plots +
-  theme(legend.position = "bottom",  # Place the legend at the bottom
-        legend.box = "vertical",     # Arrange legend items vertically
-        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "bottom")  # Adjust legend margin
 
 # Save the combined plots with the overall title in the middle and a single legend
-ggsave("ligand_activity_NicheNet_ATAC_24_NO_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
+ggsave("ligand_activity_NicheNet_ATAC_24_NO_RNA.png", plot = combined_plots, width = 13, height = 12, dpi = 300)
 ```
 
 
 ```{r ligand-target-matrix construction, echo=TRUE}
 #import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_OSM_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_grn.txt", header = TRUE, sep = ";")
-gr_network_LINCS_HGF_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_grn.txt", header = TRUE, sep = ";")
-gr_network_LINCS_EGF_RNA <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_OSM_RNA_24 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_HGF_RNA_24 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_EGF_RNA_24 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_grn.txt", header = TRUE, sep = ";")
 
 #look into overlap target genes and target genes NicheNet
-targets.GRN_OSM_RNA <- unique(gr_network_LINCS_OSM_RNA $to)
-targets.GRN_EGF_RNA <- unique(gr_network_LINCS_EGF_RNA$to)
-targets.GRN_HGF_RNA <- unique(gr_network_LINCS_HGF_RNA$to)
+targets.GRN_OSM_RNA_24 <- unique(gr_network_LINCS_OSM_RNA_24$to)
+targets.GRN_EGF_RNA_24 <- unique(gr_network_LINCS_EGF_RNA_24$to)
+targets.GRN_HGF_RNA_24 <- unique(gr_network_LINCS_HGF_RNA_24$to)
 
-length(targets.GRN_OSM_RNA)
-length(targets.GRN_EGF_RNA)
-length(targets.GRN_HGF_RNA)
+length(targets.GRN_OSM_RNA_24)
+length(targets.GRN_EGF_RNA_24)
+length(targets.GRN_HGF_RNA_24)
 
-length(intersect(targets.NN, targets.GRN_OSM_RNA))
-length(intersect(targets.NN, targets.GRN_EGF_RNA))
-length(intersect(targets.NN, targets.GRN_HGF_RNA))
+table(filtered_de.genes$EGF_24h$diffexp$gene %in% gr_network_LINCS_EGF_RNA_24$to)
+table(filtered_de.genes$OSM_24h$diffexp$gene %in% gr_network_LINCS_OSM_RNA_24$to)
+table(filtered_de.genes$HGF_24h$diffexp$gene %in% gr_network_LINCS_HGF_RNA_24$to)
+
+length(unique(gr_network_LINCS_EGF_RNA_24$to)) - (table(filtered_de.genes$EGF_24h$diffexp$gene %in% gr_network_LINCS_EGF_RNA_24$to)["TRUE"])
+length(unique(gr_network_LINCS_OSM_RNA_24$to)) - (table(filtered_de.genes$OSM_24h$diffexp$gene %in% gr_network_LINCS_OSM_RNA_24$to)["TRUE"])
+length(unique(gr_network_LINCS_HGF_RNA_24$to)) - (table(filtered_de.genes$HGF_24h$diffexp$gene %in% gr_network_LINCS_HGF_RNA_24$to)["TRUE"])
+
+length(intersect(targets.NN, targets.GRN_OSM_RNA_24))
+length(intersect(targets.NN, targets.GRN_EGF_RNA_24))
+length(intersect(targets.NN, targets.GRN_HGF_RNA_24))
 
 #add your new source to the weighted networks in NicheNet 
 new_network_weights_df <- tibble(
@@ -702,14 +717,14 @@ new_network_weights_df <- tibble(
 new_source_weights_df <- optimized_source_weights_df %>% bind_rows(new_network_weights_df)
 
 #add LINCS GRN to default GRN NicheNet
-new_gr_network_total_RNA <- gr_network %>% bind_rows(gr_network_LINCS_OSM_RNA) %>% bind_rows(gr_network_LINCS_HGF_RNA) %>%
-  bind_rows(gr_network_LINCS_EGF_RNA)
+new_gr_network_total_RNA <- gr_network %>% bind_rows(gr_network_LINCS_OSM_RNA_24) %>% bind_rows(gr_network_LINCS_HGF_RNA_24) %>%
+  bind_rows(gr_network_LINCS_EGF_RNA_24)
 
 # aggregate the individual data sources in a weighted manner to obtain a weighted integrated signaling network
 weighted_networks_total_RNA <- construct_weighted_networks(
   lr_network = lr_network, 
   sig_network = sig_network, 
-  gr_network = new_gr_network_total_RNA, 
+  gr_network = new_gr_network_total_RNA_24, 
   source_weights_df = new_source_weights_df %>%
     dplyr::select(source, avg_weight) %>%
     rename(weight = avg_weight))
@@ -842,15 +857,20 @@ metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_
 plots <- lapply(metrics, function(metric) {
   p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
     geom_boxplot() +
-    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7,  size = 1.5) +
     labs(title = metric,
          x = " ",
          y = metric) +
-    scale_color_discrete() +
+    scale_color_manual(values = my_colors) + 
     theme_minimal() +
-    theme(plot.title = element_text(size = 14, hjust = 0.5),
+    theme(plot.title = element_text(size = 12, hjust = 0.5),
           plot.margin = margin(1, 1, 1, 1, "cm"),
-          legend.position = "none") +
+          legend.position = "none",
+      axis.title = element_text(size = 14),  
+      axis.text = element_text(size = 10),   
+      axis.ticks = element_line(size = 1),  #
+      strip.text = element_text(size = 12),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
     theme(legend.title = element_blank(), legend.text = element_text(size = 12))
   
   p
@@ -858,16 +878,11 @@ plots <- lapply(metrics, function(metric) {
 
 # Combine plots using the patchwork package
 combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
-
-# Display the combined plots with a single legend
-combined_plots +
-  theme(legend.position = "bottom",  # Place the legend at the bottom
-        legend.box = "vertical",     # Arrange legend items vertically
-        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "bottom")  # Adjust legend margin
 
 # Save the combined plots with the overall title in the middle and a single legend
-ggsave("ligand_activity_NicheNet_ATAC_24_with_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
+ggsave("ligand_activity_NicheNet_ATAC_24_with_RNA.png", plot = combined_plots, width = 13, height = 12, dpi = 300)
 ```
 
 
@@ -880,21 +895,33 @@ First run GRN.R, there the weighted networks and individual ligand-target matric
 In GRN.R are the weighted networks and individual ligand-target-matrices constructed.
 ```{r ligand-target-matrix construction 48 NO_RNA_seq, echo=TRUE}
 #import one ligand GRN networks (Ruth generated from https://zenodo.org/record/7418451#.ZGNiqXZBx9O (ANANSE networks))
-gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_OSM_48 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_HGF_48 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
+gr_network_LINCS_EGF_48 <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 
-targets.GRN_OSM <- unique(gr_network_LINCS_OSM $to)
-targets.GRN_EGF <- unique(gr_network_LINCS_EGF $to)
-targets.GRN_HGF <- unique(gr_network_LINCS_HGF $to)
+targets.GRN_OSM_48 <- unique(gr_network_LINCS_OSM_48$to)
+targets.GRN_EGF_48 <- unique(gr_network_LINCS_EGF_48$to)
+targets.GRN_HGF_48 <- unique(gr_network_LINCS_HGF_48$to)
 
-length(targets.GRN_OSM)
-length(targets.GRN_EGF)
-length(targets.GRN_HGF)
+length(filtered_de.genes$EGF_48h$diffexp$gene[(filtered_de.genes$EGF_48h$diffexp$gene %in% gr_network_LINCS_EGF_48$to)])
+length(filtered_de.genes$OSM_48h$diffexp$gene[(filtered_de.genes$OSM_48h$diffexp$gene %in% gr_network_LINCS_OSM_48$to)])
+length(filtered_de.genes$HGF_48h$diffexp$gene[(filtered_de.genes$HGF_48h$diffexp$gene %in% gr_network_LINCS_HGF_48$to)])
 
-length(intersect(targets.NN, targets.GRN_OSM))
-length(intersect(targets.NN, targets.GRN_EGF))
-length(intersect(targets.NN, targets.GRN_HGF))
+table(filtered_de.genes$EGF_48h$diffexp$gene %in% gr_network_LINCS_EGF_48$to)
+table(filtered_de.genes$OSM_48h$diffexp$gene %in% gr_network_LINCS_OSM_48$to)
+table(filtered_de.genes$HGF_48h$diffexp$gene %in% gr_network_LINCS_HGF_48$to)
+
+length(unique(gr_network_LINCS_EGF_48$to)) - (table(filtered_de.genes$EGF_48h$diffexp$gene %in% gr_network_LINCS_EGF_48$to)["TRUE"])
+length(unique(gr_network_LINCS_OSM_48$to)) - (table(filtered_de.genes$OSM_48h$diffexp$gene %in% gr_network_LINCS_OSM_48$to)["TRUE"])
+length(unique(gr_network_LINCS_HGF_48$to)) - (table(filtered_de.genes$HGF_48h$diffexp$gene %in% gr_network_LINCS_HGF_48$to)["TRUE"])
+
+length(targets.GRN_OSM_48)
+length(targets.GRN_EGF_48)
+length(targets.GRN_HGF_48)
+
+length(intersect(targets.NN, targets.GRN_OSM_48))
+length(intersect(targets.NN, targets.GRN_EGF_48))
+length(intersect(targets.NN, targets.GRN_HGF_48))
 
 #add your new source to the weighted networks in NicheNet 
 new_network_weights_df <- tibble(
@@ -1005,7 +1032,6 @@ performances_ATAC %>%
 ggsave("performances_NicheNet_ATAC_48_NO_RNA.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
 
 
-
 # How good are the ligand activities?
 all_ligands_ATAC <- settings %>% extract_ligands_from_settings(combination = FALSE) %>% unlist()
 settings_ligand_prediction_ATAC <- settings %>% convert_settings_ligand_prediction(all_ligands = all_ligands_ATAC, validation = TRUE)
@@ -1046,15 +1072,20 @@ metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_
 plots <- lapply(metrics, function(metric) {
   p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
     geom_boxplot() +
-    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7,  size = 1.5) +
     labs(title = metric,
          x = " ",
          y = metric) +
-    scale_color_discrete() +
+    scale_color_manual(values = my_colors) + 
     theme_minimal() +
-    theme(plot.title = element_text(size = 14, hjust = 0.5),
+    theme(plot.title = element_text(size = 12, hjust = 0.5),
           plot.margin = margin(1, 1, 1, 1, "cm"),
-          legend.position = "none") +
+          legend.position = "none",
+      axis.title = element_text(size = 14),  
+      axis.text = element_text(size = 10),   
+      axis.ticks = element_line(size = 1),  #
+      strip.text = element_text(size = 12),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
     theme(legend.title = element_blank(), legend.text = element_text(size = 12))
   
   p
@@ -1062,16 +1093,11 @@ plots <- lapply(metrics, function(metric) {
 
 # Combine plots using the patchwork package
 combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
-
-# Display the combined plots with a single legend
-combined_plots +
-  theme(legend.position = "bottom",  # Place the legend at the bottom
-        legend.box = "vertical",     # Arrange legend items vertically
-        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "bottom")  # Adjust legend margin
 
 # Save the combined plots with the overall title in the middle and a single legend
-ggsave("ligand_activity_NicheNet_ATAC_48_no_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
+ggsave("ligand_activity_NicheNet_ATAC_48_no_RNA.png", plot = combined_plots, width = 13, height = 12, dpi = 300)
 ```
 
 
@@ -1243,15 +1269,20 @@ metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_
 plots <- lapply(metrics, function(metric) {
   p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
     geom_boxplot() +
-    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7,  size = 1.5) +
     labs(title = metric,
          x = " ",
          y = metric) +
-    scale_color_discrete() +
+    scale_color_manual(values = my_colors) + 
     theme_minimal() +
-    theme(plot.title = element_text(size = 14, hjust = 0.5),
+    theme(plot.title = element_text(size = 12, hjust = 0.5),
           plot.margin = margin(1, 1, 1, 1, "cm"),
-          legend.position = "none") +
+          legend.position = "none",
+      axis.title = element_text(size = 14),  
+      axis.text = element_text(size = 10),   
+      axis.ticks = element_line(size = 1),  #
+      strip.text = element_text(size = 12),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
     theme(legend.title = element_blank(), legend.text = element_text(size = 12))
   
   p
@@ -1259,16 +1290,11 @@ plots <- lapply(metrics, function(metric) {
 
 # Combine plots using the patchwork package
 combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
-
-# Display the combined plots with a single legend
-combined_plots +
-  theme(legend.position = "bottom",  # Place the legend at the bottom
-        legend.box = "vertical",     # Arrange legend items vertically
-        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
+  theme(legend.position = "bottom")  # Adjust legend margin
 
 # Save the combined plots with the overall title in the middle and a single legend
-ggsave("ligand_activity_NicheNet_ATAC_48_with_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
+ggsave("ligand_activity_NicheNet_ATAC_48_with_RNA.png", plot = combined_plots, width = 13, height = 12, dpi = 300)
 
 
 ```
