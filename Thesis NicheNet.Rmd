@@ -22,6 +22,7 @@ library(ggstatsplot)
 library(cowplot)
 library(annotables)
 library(viridis)
+library(patchwork)
 memory.limit(size = 3000000)
 knitr::opts_chunk$set(error = TRUE)
 ```
@@ -32,6 +33,8 @@ lr_network <- readRDS(url("https://zenodo.org/record/7074291/files/lr_network_hu
 sig_network <- readRDS(url("https://zenodo.org/record/7074291/files/signaling_network_human_21122021.rds"))
 gr_network <- readRDS(url("https://zenodo.org/record/7074291/files/gr_network_human_21122021.rds"))
 ligand_target_matrix <- readRDS(url("https://zenodo.org/record/7074291/files/ligand_target_matrix_nsga2r_final.rds"))
+expression_settings_validation <- readRDS(url("https://zenodo.org/record/8010790/files/expression_settings"))
+
 ```
 
 ## Check 1. NicheNet genes and Ananse genes
@@ -277,13 +280,12 @@ plotBCV(y)
 fit <- glmQLFit(y, design, robust = TRUE)
 plotQLDisp(fit)
     
-
 de.genes <- list()
 
 for (i in 1:length(contr)){
   print(names(contr)[[i]])
   qlf <- glmQLFTest(fit, contrast=contr[[i]])
-  is.de <- decideTestsDGE(qlf,p.value = 0.05, lfc = 1.5)
+  is.de <- decideTestsDGE(qlf, p.value = 0.05, lfc = 1.5)
   print(summary(is.de))
   diffexp <- as.tibble(topTags(qlf, n = Inf, p.value = 1)$table) %>%
       dplyr::select(logFC, FDR, symbol) %>%
@@ -296,21 +298,42 @@ for (i in 1:length(contr)){
                           "type" = "primary") # we still don´t know what the criterion was for type
   }
 names(de.genes) <- names(contr)
-  
 
+# Create an empty list to store filtered results
+filtered_de.genes <- list()
+
+# Loop through the de.genes list
+for (i in names(de.genes)) {
+  # Filter the diffexp data frame based on criteria
+  filtered_diffexp <- de.genes[[i]]$diffexp %>%
+    filter((qval <= 0.05) & (abs(lfc) >= 1.5))
+  
+  # Store the filtered results in the new list
+  filtered_de.genes[[i]] <- list(
+    "diffexp" = filtered_diffexp,
+    "from" = de.genes[[i]]$from,
+    "name" = de.genes[[i]]$name,
+    "type" = de.genes[[i]]$type
+  )
+}
+
+# Names for the filtered_de.genes list
+names(filtered_de.genes) <- names(de.genes)
+  
 # sanity check
-str(de.genes)
+str(filtered_de.genes)
 tail(de.genes$EGF_24h$table)
   
-DE_EGF_24 <- de.genes$EGF_24h$diffexp  %>% filter((abs(lfc) >= 1.5) & (qval <= 0.05))
-DE_EGF_48 <- de.genes$EGF_48h$diffexp  %>% filter((abs(lfc) >= 1.5) & (qval <= 0.05))
-DE_OSM_24 <- de.genes$OSM_24h$diffexp  %>% filter((abs(lfc) >= 1.5) & (qval <= 0.05))
-DE_OSM_48 <- de.genes$OSM_48h$diffexp  %>% filter((abs(lfc) >= 1.5) & (qval <= 0.05))
-DE_HGF_24 <- de.genes$HGF_24h$diffexp  %>% filter((abs(lfc) >= 1.5) & (qval <= 0.05))
-DE_HGF_48 <- de.genes$HGF_48h$diffexp  %>% filter((abs(lfc) >= 1.5) & (qval <= 0.05))
+DE_EGF_24 <- de.genes$EGF_24h$diffexp 
+DE_EGF_48 <- de.genes$EGF_48h$diffexp  
+DE_OSM_24 <- de.genes$OSM_24h$diffexp  
+DE_OSM_48 <- de.genes$OSM_48h$diffexp  
+DE_HGF_24 <- de.genes$HGF_24h$diffexp 
+DE_HGF_48 <- de.genes$HGF_48h$diffexp 
 ```
 
 We see a high amount of DE genes in all contrasts. Right now we take all genes that meet the FDR threshold and no threshold on the logFC. If we check the expressed genes, we ideally have about 10%, so maximum 1600 DE genes and it would help to threshold that further. 
+
 ## Check 4: Overlap with the DE genes
 
 We now have potential ground truth data sets that we can use now for the validation of NN. But do the DE genes occur in NN and as relevant target genes in the GRN?
@@ -321,7 +344,6 @@ targets.DE <- de.genes$EGF_24h$diffexp$gene
 length(targets.DE)
 length(intersect(targets.NN, targets.DE)) # very high
 length(intersect(targets.GRN, targets.DE)) # very high
-
 # what if we are more stringent? who knows ...
 ```
 ## Check 5: Run a regular NN validation 
@@ -331,42 +353,8 @@ Let's go back to the validation vignette of NN and check how we can do it with a
 We see that it is a list, named with the GSEnumber_ligand_add. It contains the from, the name and the type (with primary and secondary). We should ask about that. The diffexp contains lfc, qval (fdr-correction) and gene that have not been filtered. So the function from NicheNet chooses thresholds, in the original case the absolute value of the logFC exceeds 1 and the FDR-corrected p-value is smaller than 0.1. We are making it more stringent to logFC exceeds 1.5 and the FDR-corrected p-value is smaller than 0.05.
 
 ```{r NN validation vignette}
-# adjust the function to make it more stringent (q<=0.05, abs(lfc)) >= 2
-convert_expression_settings_evaluation <- 
-  function(setting){
-    if (!is.character(setting$from) | !is.character(setting$name)) 
-        stop("setting$from and setting$name should be character vectors")
-    if (!is.data.frame(setting$diffexp)) 
-        stop("setting$diffexp should be data frame")
-    if (is.null(setting$diffexp$lfc) | is.null(setting$diffexp$gene) | 
-        is.null(setting$diffexp$qval)) 
-        stop("setting$diffexp should contain the variables 'lfc', 'qval' and 'diffexp'")
-    requireNamespace("dplyr")
-    diffexp_df = setting$diffexp %>% mutate(diffexp = (abs(lfc) >= 1.5) & (qval <= 0.05))
-    diffexp_vector = diffexp_df$diffexp
-    names(diffexp_vector) = diffexp_df$gene
-    diffexp_vector = diffexp_vector[unique(names(diffexp_vector))]
-    if ((diffexp_vector %>% sum) == 0) {
-        print(setting$name)
-        warning("No differentially expressed genes, remove this expression dataset")
-    }
-    return(list(name = setting$name, from = setting$from, response = diffexp_vector))
-  }
-
-# The ligand treatment expression datasets used for validation can be downloaded from Zenodo:
-expression_settings_validation <- readRDS(url("https://zenodo.org/record/8010790/files/expression_settings"))
-
-str(expression_settings_validation[[1]])
-str(de.genes[[1]]) 
-
-# First these validation data sets need to be converted to the right format, makes it in to a logical vector if it is DE or not
-
-settings <- de.genes%>%
-  lapply(convert_expression_settings_evaluation)
-str(settings[[1]])
-
-# 16431 genes are checked to be expressed or not, so the entire list without filter is needed for validation? 10 more genes than expected 
-settings <- settings %>% discard(~length(.$from) > 1) 
+### Transcriptional response prediction evaluation
+settings <- de.genes %>% lapply(convert_expression_settings_evaluation)
 
 # Evaluate transcriptional response prediction on every dataset
 performances <- settings %>% lapply(evaluate_target_prediction, ligand_target_matrix) %>% bind_rows()
@@ -378,26 +366,43 @@ scorelabels <- c(auroc="AUROC", aupr_corrected="AUPR (corrected)", auc_iregulon_
 
 scorerandom <- c(auroc=0.5, aupr_corrected=0, auc_iregulon_corrected = 0, pearson = 0, spearman = 0,mean_rank_GST_log_pval = 0) %>% data.frame(scorevalue=.) %>% rownames_to_column("scorename")
 
+#visualisation provided in the vignette
 performances %>%
   mutate(model = "NicheNet v2") %>%
   ggplot() +
-  geom_violin(aes(model, scorevalue, group=model, fill = model)) +
-  geom_boxplot(aes(model, scorevalue, group = model),width = 0.05) +
+  geom_violin(aes(model, scorevalue, group = model, fill = model)) +
+  geom_boxplot(aes(model, scorevalue, group = model), width = 0.05) +
   scale_y_continuous("Score target prediction") +
   facet_wrap(~scorename, scales = "free", labeller=as_labeller(scorelabels)) +
   geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
   theme_bw()
 
+#visualisation individual points
+# Sample labels for demonstration
+scorelabels <- c(
+  "auroc" = "AUROC",
+  "aupr_corrected" = "AUPR (corrected)",
+  "mean_rank_GST_log_pval" = "Mean Rank GST Log P-Value",
+  "auc_iregulon_corrected" = "AUC iRegulon (corrected)",
+  "pearson" = "Pearson",
+  "spearman" = "Spearman"
+)
+
+## adapted visualisation for thesis
 performances %>%
   mutate(model = "NicheNet v2") %>%
   ggplot() +
   geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
   geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), alpha = 0.7) +
   scale_y_continuous("Score target prediction") +
-  facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
-  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
-  theme_bw()
+  facet_wrap(~scorename, scales = "free", labeller = labeller(scorename = scorelabels)) + 
+  theme_bw() +
+  labs(title = "Transcriptional response prediction evaluation", color = "", x = "") +  
+  theme(plot.title = element_text(size = 15, hjust = 0.5))
 
+ggsave("performances_NicheNet.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
+
+### Ligand activity prediction evaluation
 # How good are the ligand activities?
 all_ligands <- settings %>% extract_ligands_from_settings(combination = FALSE) %>% unlist()
 settings_ligand_prediction <- settings %>% convert_settings_ligand_prediction(all_ligands = all_ligands, validation = TRUE)
@@ -410,133 +415,7 @@ ligand_importances <- settings_ligand_prediction %>% lapply(get_single_ligand_im
 # Replace infinite values with 10000
 ligand_importances <- ligand_importances %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
 
-# Get available metrics from the data
-exclude_columns <- c("setting", "test_ligand", "ligand")
-metrics <- colnames(ligand_importances)[!(colnames(ligand_importances) %in% exclude_columns)]
-
-plots <- lapply(metrics, function(metric) {
-  ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste("Metric:", metric),
-         x = "Setting",
-         y = metric) +
-    theme_minimal() +
-    scale_color_discrete()  # Add color scale legend
-})
-plots
-
-
-
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-plots
-
-# Create a list of plots for different metrics
-
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-plots
-
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-# Combine plots using the patchwork package
-combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
-  theme(legend.position = "none")  # Adjust legend position as needed
-
-# Add the legend in the middle of the combined plots
-combined_plots_with_legend <- combined_plots +
-  theme(legend.position = "center")
-
-combined_plots_with_legend +
-  plot_layout(widths = c(20), heights = c(20))
-combined_plots_with_legend
-
-# Save the combined plots with the overall title in the middle and a single legend
-ggsave("NicheNet.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
-
-
-
+# visualisation from vignette
 evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
     lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
     bind_rows() %>% inner_join(ligand_importances %>% distinct(setting,ligand))
@@ -558,26 +437,41 @@ evaluation_ligand_prediction %>%
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
 
-performances %>%
-  mutate(model = "NicheNet v2") %>%
-  ggplot() +
-  geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
-  geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), size = 4, alpha = 0.7) +
-  scale_color_viridis(discrete = TRUE) +
-  scale_y_continuous("Score target prediction") +
-  facet_wrap(~scorename, scales = "free") +  # Using scorename directly
-  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
-  theme_bw() +
-  theme(
-    text = element_text(size = 14),
-    axis.title = element_text(size = 16),
-    axis.text = element_text(size = 12),
-    legend.title = element_text(size = 14),
-    legend.text = element_text(size = 12),
-    plot.title = element_text(size = 18),
-    panel.spacing = unit(2, "lines"),
-    plot.margin = margin(1, 1, 1, 1, "cm")
-  )
+## Adapted visualisation for thesis
+metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")
+
+# Create a list of plots for specific metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = metric,
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 14, hjust = 0.5),
+          plot.margin = margin(1, 1, 1, 1, "cm"),
+          legend.position = "none") +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
+
+# Display the combined plots with a single legend
+combined_plots +
+  theme(legend.position = "bottom",  # Place the legend at the bottom
+        legend.box = "vertical",     # Arrange legend items vertically
+        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("ligand_activity_NicheNet.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
+
+
 ```
 ##### 24 ######
 ## Check 6: Run an updated NN validation with the ATAC GRN
@@ -591,7 +485,6 @@ In GRN.R are the weighted networks and individual ligand-target-matrices constru
 gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_24_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-
 
 targets.GRN_OSM <- unique(gr_network_LINCS_OSM $to)
 targets.GRN_EGF <- unique(gr_network_LINCS_EGF $to)
@@ -660,9 +553,6 @@ plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"],
      ylab = "Regulatory potentials with ATAC",
      main = "Regulatory potentials EGF 24 hour")
 
-
-
-
 plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
 
 plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
@@ -672,8 +562,6 @@ plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "
 # so some increase, but over the entire spectrum
 
 # Evaluate transcriptional response prediction on every dataset
-# shrink the data set for easy use
-settings <- settings[-c(2:6)]
 performances_ATAC <- settings %>% lapply(evaluate_target_prediction, ligand_target_matrix_total) %>% bind_rows()
 # Visualize some classification evaluation metrics showing the target gene prediction performance
 performances_ATAC <- performances_ATAC %>% dplyr::select(-aupr, -auc_iregulon,-pearson_log_pval,-spearman_log_pval ,-sensitivity_roc, -specificity_roc) %>% gather(key = scorename, value = scorevalue, auroc:spearman)
@@ -691,15 +579,30 @@ performances_ATAC %>%
   geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
   theme_bw()
 
+#visualisation individual points
+# Sample labels for demonstration
+scorelabels <- c(
+  "auroc" = "AUROC",
+  "aupr_corrected" = "AUPR (corrected)",
+  "mean_rank_GST_log_pval" = "Mean Rank GST Log P-Value",
+  "auc_iregulon_corrected" = "AUC iRegulon (corrected)",
+  "pearson" = "Pearson",
+  "spearman" = "Spearman"
+)
+
+## adapted visualisation for thesis
 performances_ATAC %>%
   mutate(model = "NicheNet v2") %>%
   ggplot() +
   geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
   geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), alpha = 0.7) +
   scale_y_continuous("Score target prediction") +
-  facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
-  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
-  theme_bw()
+  facet_wrap(~scorename, scales = "free", labeller = labeller(scorename = scorelabels)) + 
+  theme_bw() +
+  labs(title = "Transcriptional response prediction evaluation", color = "", x = "") +  
+  theme(plot.title = element_text(size = 15, hjust = 0.5))
+
+ggsave("performances_NicheNet_24h_ATAC_no_RNA.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
 
 
 # How good are the ligand activities?
@@ -712,71 +615,21 @@ ligand_importances_ATAC <- settings_ligand_prediction_ATAC %>% lapply(get_single
 # Look at predictive performance of single/individual importance measures to predict ligand activity: of all ligands tested, the ligand that is truly active in a dataset should get the highest activity score (i.e. best target gene prediction performance)
 
 # Replace infinite values with 10000
-ligand_importances <- ligand_importances %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
+ligand_importances_ATAC <- ligand_importances_ATAC %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
 
-# Get available metrics from the data
-exclude_columns <- c("setting", "test_ligand", "ligand")
-metrics <- colnames(ligand_importances_ATAC)[!(colnames(ligand_importances_ATAC) %in% exclude_columns)]
-
-plots <- lapply(metrics, function(metric) {
-  ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances_ATAC, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = "Setting",
-         y = metric) +
-    theme_minimal() +
-    scale_color_discrete()  # Add color scale legend
-})
-plots
-
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-# Combine plots using the patchwork package
-combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
-  theme(legend.position = "none")  # Adjust legend position as needed
-
-# Add the legend in the middle of the combined plots
-combined_plots_with_legend <- combined_plots +
-  theme(legend.position = "center")
-
-combined_plots_with_legend +
-  plot_layout(widths = c(20), heights = c(20))
-combined_plots_with_legend
-
-# Save the combined plots with the overall title in the middle and a single legend
-ggsave("NicheNet with ATAC NO RNA seq 24.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
-
-evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
-    lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
-    bind_rows() %>% inner_join(ligand_importances %>% distinct(setting,ligand))
+evaluation_ligand_prediction_ATAC <- ligand_importances_ATAC$setting %>% unique() %>% lapply(function(x){x}) %>%
+    lapply(wrapper_evaluate_single_importances_ligand_prediction, ligand_importances_ATAC) %>%
+    bind_rows() %>% inner_join(ligand_importances_ATAC %>% distinct(setting,ligand))
 
 # Visualize some classification evaluation metrics showing the ligand activity prediction performance
-evaluation_ligand_prediction <- evaluation_ligand_prediction %>% dplyr::select(-aupr, -sensitivity_roc, -specificity_roc, -pearson, -spearman, -mean_rank_GST_log_pval) %>% gather(key = scorename, value = scorevalue, auroc:aupr_corrected)
+evaluation_ligand_prediction_ATAC <- evaluation_ligand_prediction_ATAC %>% dplyr::select(-aupr, -sensitivity_roc, -specificity_roc, -pearson, -spearman, -mean_rank_GST_log_pval) %>% gather(key = scorename, value = scorevalue, auroc:aupr_corrected)
 scorelabels <- c(auroc="AUROC", aupr_corrected="AUPR (corrected)")
 scorerandom <- c(auroc=0.5, aupr_corrected=0) %>% data.frame(scorevalue=.) %>% rownames_to_column("scorename")
 
-evaluation_ligand_prediction %>%
+evaluation_ligand_prediction_ATAC %>%
  filter(importance_measure %in% c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")) %>%
   ggplot() +
-  geom_violin(aes(importance_measure, scorevalue, group=importance_measure, fill = importance_measure)) +
+  geom_violin(aes(importance_measure, scorevalue, group = importance_measure, fill = importance_measure)) +
   geom_boxplot(aes(importance_measure, scorevalue, group = importance_measure),width = 0.1) +
   scale_y_continuous("Evaluation ligand activity prediction") +
   scale_x_discrete("Ligand activity measure") +
@@ -784,6 +637,40 @@ evaluation_ligand_prediction %>%
   geom_hline(aes(yintercept=scorevalue), data = scorerandom, linetype = 2, color = "red") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
+
+## Adapted visualisation for thesis
+metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")
+
+# Create a list of plots for specific metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances_ATAC, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = metric,
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 14, hjust = 0.5),
+          plot.margin = margin(1, 1, 1, 1, "cm"),
+          legend.position = "none") +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
+
+# Display the combined plots with a single legend
+combined_plots +
+  theme(legend.position = "bottom",  # Place the legend at the bottom
+        legend.box = "vertical",     # Arrange legend items vertically
+        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("ligand_activity_NicheNet_ATAC_24_NO_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
 ```
 
 
@@ -859,10 +746,8 @@ plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_4[,"EGF"], xlab = "
 
 plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_4[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 24 hour")
 
-
-
 plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_4[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 24 hour")
-p
+
 
 ```
 
@@ -890,15 +775,31 @@ performances_ATAC %>%
   theme_bw()
 
 
+#visualisation individual points
+# Sample labels for demonstration
+scorelabels <- c(
+  "auroc" = "AUROC",
+  "aupr_corrected" = "AUPR (corrected)",
+  "mean_rank_GST_log_pval" = "Mean Rank GST Log P-Value",
+  "auc_iregulon_corrected" = "AUC iRegulon (corrected)",
+  "pearson" = "Pearson",
+  "spearman" = "Spearman"
+)
+
+## adapted visualisation for thesis
 performances_ATAC %>%
   mutate(model = "NicheNet v2") %>%
   ggplot() +
   geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
   geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), alpha = 0.7) +
   scale_y_continuous("Score target prediction") +
-  facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
-  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
-  theme_bw()
+  facet_wrap(~scorename, scales = "free", labeller = labeller(scorename = scorelabels)) + 
+  theme_bw() +
+  labs(title = "Transcriptional response prediction evaluation", color = "", x = "") +  
+  theme(plot.title = element_text(size = 15, hjust = 0.5))
+
+ggsave("performances_NicheNet_ATAC_24_with_RNA.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
+
 
 
 # How good are the ligand activities?
@@ -912,56 +813,6 @@ ligand_importances_ATAC <- settings_ligand_prediction_ATAC %>% lapply(get_single
 
 # Replace infinite values with 10000
 ligand_importances <- ligand_importances_ATAC %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
-
-# Get available metrics from the data
-exclude_columns <- c("setting", "test_ligand", "ligand")
-metrics <- colnames(ligand_importances_ATAC)[!(colnames(ligand_importances_ATAC) %in% exclude_columns)]
-
-plots <- lapply(metrics, function(metric) {
-  ggplot(ligand_importances_ATAC, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances_ATAC, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste("Metric:", metric),
-         x = "Setting",
-         y = metric) +
-    theme_minimal() +
-    scale_color_discrete()  # Add color scale legend
-})
-plots
-
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-# Combine plots using the patchwork package
-combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
-  theme(legend.position = "none")  # Adjust legend position as needed
-
-# Add the legend in the middle of the combined plots
-combined_plots_with_legend <- combined_plots +
-  theme(legend.position = "center")
-
-combined_plots_with_legend +
-  plot_layout(widths = c(20), heights = c(20))
-combined_plots_with_legend
-
-# Save the combined plots with the overall title in the middle and a single legend
-ggsave("NicheNet with ATAC RNA seq 24.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
 
 evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
     lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
@@ -983,6 +834,40 @@ evaluation_ligand_prediction %>%
   geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
+
+## Adapted visualisation for thesis
+metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")
+
+# Create a list of plots for specific metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = metric,
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 14, hjust = 0.5),
+          plot.margin = margin(1, 1, 1, 1, "cm"),
+          legend.position = "none") +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
+
+# Display the combined plots with a single legend
+combined_plots +
+  theme(legend.position = "bottom",  # Place the legend at the bottom
+        legend.box = "vertical",     # Arrange legend items vertically
+        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("ligand_activity_NicheNet_ATAC_24_with_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
 ```
 
 
@@ -998,7 +883,6 @@ In GRN.R are the weighted networks and individual ligand-target-matrices constru
 gr_network_LINCS_OSM <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_OSM_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 gr_network_LINCS_HGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_HGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
 gr_network_LINCS_EGF <- read.delim2("C:/Users/klara/MaStat/Thesis/GithubThesis/Thesis_NicheNet/Ananse_networks/GRN/LINCS_MCF10A_EGF_48_NO_RNAseq_grn.txt", header = TRUE, sep = ";")
-
 
 targets.GRN_OSM <- unique(gr_network_LINCS_OSM $to)
 targets.GRN_EGF <- unique(gr_network_LINCS_EGF $to)
@@ -1067,9 +951,6 @@ plot(ligand_target_matrix[,"EGF"], ligand_target_matrix_ATAC_3[,"EGF"],
      ylab = "Regulatory potentials with ATAC",
      main = "Regulatory potentials EGF 48 hour")
 
-
-
-
 plot(ligand_target_matrix[,"HGF"], ligand_target_matrix_ATAC_3[,"HGF"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials HGF 48 hour")
 
 plot(ligand_target_matrix[,"OSM"], ligand_target_matrix_ATAC_3[,"OSM"], xlab = "NicheNet default regulatory potentials", ylab = "Regulatory potentials with ATAC", main = "Regulatory potentials OSM 48 hour")
@@ -1098,15 +979,31 @@ performances_ATAC %>%
   geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
   theme_bw()
 
+#visualisation individual points
+# Sample labels for demonstration
+scorelabels <- c(
+  "auroc" = "AUROC",
+  "aupr_corrected" = "AUPR (corrected)",
+  "mean_rank_GST_log_pval" = "Mean Rank GST Log P-Value",
+  "auc_iregulon_corrected" = "AUC iRegulon (corrected)",
+  "pearson" = "Pearson",
+  "spearman" = "Spearman"
+)
+
+## adapted visualisation for thesis
 performances_ATAC %>%
   mutate(model = "NicheNet v2") %>%
   ggplot() +
   geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
   geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), alpha = 0.7) +
   scale_y_continuous("Score target prediction") +
-  facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
-  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
-  theme_bw()
+  facet_wrap(~scorename, scales = "free", labeller = labeller(scorename = scorelabels)) + 
+  theme_bw() +
+  labs(title = "Transcriptional response prediction evaluation", color = "", x = "") +  
+  theme(plot.title = element_text(size = 15, hjust = 0.5))
+
+ggsave("performances_NicheNet_ATAC_48_NO_RNA.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
+
 
 
 # How good are the ligand activities?
@@ -1119,59 +1016,7 @@ ligand_importances_ATAC <- settings_ligand_prediction_ATAC %>% lapply(get_single
 # Look at predictive performance of single/individual importance measures to predict ligand activity: of all ligands tested, the ligand that is truly active in a dataset should get the highest activity score (i.e. best target gene prediction performance)
 
 # Replace infinite values with 10000
-ligand_importances <- ligand_importances %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
-
-# Get available metrics from the data
-exclude_columns <- c("setting", "test_ligand", "ligand")
-metrics <- colnames(ligand_importances_ATAC)[!(colnames(ligand_importances_ATAC) %in% exclude_columns)]
-
-plots <- lapply(metrics, function(metric) {
-  ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances_ATAC, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = "Setting",
-         y = metric) +
-    theme_minimal() +
-    scale_color_discrete()  # Add color scale legend
-})
-plots
-
-
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-# Combine plots using the patchwork package
-combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
-  theme(legend.position = "none")  # Adjust legend position as needed
-
-# Add the legend in the middle of the combined plots
-combined_plots_with_legend <- combined_plots +
-  theme(legend.position = "center")
-
-combined_plots_with_legend +
-  plot_layout(widths = c(20), heights = c(20))
-combined_plots_with_legend
-
-# Save the combined plots with the overall title in the middle and a single legend
-ggsave("NicheNet with ATAC NO RNA seq 48.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
-
+ligand_importances <- ligand_importances_ATAC %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
 
 evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
     lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
@@ -1193,6 +1038,40 @@ evaluation_ligand_prediction %>%
   geom_hline(aes(yintercept=scorevalue), data = scorerandom, linetype = 2, color = "red") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
+
+## Adapted visualisation for thesis
+metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")
+
+# Create a list of plots for specific metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = metric,
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 14, hjust = 0.5),
+          plot.margin = margin(1, 1, 1, 1, "cm"),
+          legend.position = "none") +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
+
+# Display the combined plots with a single legend
+combined_plots +
+  theme(legend.position = "bottom",  # Place the legend at the bottom
+        legend.box = "vertical",     # Arrange legend items vertically
+        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("ligand_activity_NicheNet_ATAC_48_no_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
 ```
 
 
@@ -1298,16 +1177,30 @@ performances_ATAC %>%
   theme_bw()
 
 
+#visualisation individual points
+# Sample labels for demonstration
+scorelabels <- c(
+  "auroc" = "AUROC",
+  "aupr_corrected" = "AUPR (corrected)",
+  "mean_rank_GST_log_pval" = "Mean Rank GST Log P-Value",
+  "auc_iregulon_corrected" = "AUC iRegulon (corrected)",
+  "pearson" = "Pearson",
+  "spearman" = "Spearman"
+)
+
+## adapted visualisation for thesis
 performances_ATAC %>%
   mutate(model = "NicheNet v2") %>%
   ggplot() +
   geom_boxplot(aes(model, scorevalue, group = model), width = 0.5, outlier.shape = NA) +
   geom_point(aes(model, scorevalue, color = setting), position = position_jitter(width = 0.2), alpha = 0.7) +
   scale_y_continuous("Score target prediction") +
-  facet_wrap(~scorename, scales = "free", labeller = as_labeller(scorelabels)) +
-  geom_hline(aes(yintercept = scorevalue), data = scorerandom, linetype = 2, color = "red") +
-  theme_bw()
+  facet_wrap(~scorename, scales = "free", labeller = labeller(scorename = scorelabels)) + 
+  theme_bw() +
+  labs(title = "Transcriptional response prediction evaluation", color = "", x = "") +  
+  theme(plot.title = element_text(size = 15, hjust = 0.5))
 
+ggsave("performances_NicheNet_ATAC_48_with_RNA.png", plot = last_plot(), width = 10, height = 8, dpi = 300)
 
 # How good are the ligand activities?
 all_ligands_ATAC <- settings %>% extract_ligands_from_settings(combination = FALSE) %>% unlist()
@@ -1320,55 +1213,6 @@ ligand_importances_ATAC <- settings_ligand_prediction_ATAC %>% lapply(get_single
 
 # Replace infinite values with 10000
 ligand_importances <- ligand_importances_ATAC %>% mutate(across(ends_with("log_pval"), ~ifelse(is.infinite(.x), 10000, .x)))
-
-# Get available metrics from the data
-exclude_columns <- c("setting", "test_ligand", "ligand")
-metrics <- colnames(ligand_importances_ATAC)[!(colnames(ligand_importances_ATAC) %in% exclude_columns)]
-
-plots <- lapply(metrics, function(metric) {
-  ggplot(ligand_importances_ATAC, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances_ATAC, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste("Metric:", metric),
-         x = "Setting",
-         y = metric) +
-    theme_minimal() +
-    scale_color_discrete()  # Add color scale legend
-})
-plots
-
-# Create a list of plots for different metrics
-plots <- lapply(metrics, function(metric) {
-  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
-    geom_boxplot() +
-    geom_jitter(data = ligand_importances, aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
-    labs(title = paste(metric),
-         x = " ",
-         y = metric) +
-    scale_color_discrete() +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(size = 14, hjust = 0.5)) +  # Adjust title size and centering
-    theme(plot.margin = margin(1, 1, 1, 1, "cm")) +
-    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
-  
-  p
-})
-
-# Combine plots using the patchwork package
-combined_plots <- wrap_plots(plots, ncol = 2) +
-  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5))) +
-  theme(legend.position = "none")  # Adjust legend position as needed
-
-# Add the legend in the middle of the combined plots
-combined_plots_with_legend <- combined_plots +
-  theme(legend.position = "center")
-
-combined_plots_with_legend +
-  plot_layout(widths = c(20), heights = c(20))
-combined_plots_with_legend
-
-# Save the combined plots with the overall title in the middle and a single legend
-ggsave("NicheNet with ATAC RNA seq 48.png", plot = combined_plots_with_legend, width = 20, height = 20, dpi = 300)
 
 evaluation_ligand_prediction <- ligand_importances$setting %>% unique() %>% lapply(function(x){x}) %>%
     lapply(wrapper_evaluate_single_importances_ligand_prediction,ligand_importances) %>%
@@ -1390,6 +1234,43 @@ evaluation_ligand_prediction %>%
   geom_hline(aes(yintercept=scorevalue), data=scorerandom, linetype = 2, color = "red") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90))
+
+
+## Adapted visualisation for thesis
+metrics <- c("auroc", "aupr_corrected", "mean_rank_GST_log_pval", "auc_iregulon_corrected", "pearson", "spearman")
+
+# Create a list of plots for specific metrics
+plots <- lapply(metrics, function(metric) {
+  p <- ggplot(ligand_importances, aes(x = setting, y = .data[[metric]])) +
+    geom_boxplot() +
+    geom_jitter(aes(color = factor(test_ligand)), width = 0.2, alpha = 0.7) +
+    labs(title = metric,
+         x = " ",
+         y = metric) +
+    scale_color_discrete() +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 14, hjust = 0.5),
+          plot.margin = margin(1, 1, 1, 1, "cm"),
+          legend.position = "none") +
+    theme(legend.title = element_blank(), legend.text = element_text(size = 12))
+  
+  p
+})
+
+# Combine plots using the patchwork package
+combined_plots <- wrap_plots(plots, ncol = 2) +
+  plot_annotation(title = "Ligand activity prediction evaluation", theme = theme(plot.title = element_text(size = 24, hjust = 0.5)))
+
+# Display the combined plots with a single legend
+combined_plots +
+  theme(legend.position = "bottom",  # Place the legend at the bottom
+        legend.box = "vertical",     # Arrange legend items vertically
+        legend.margin = margin(t = 0, unit = "pt", b = 20, l = 0, r = 0))  # Adjust legend margin
+
+# Save the combined plots with the overall title in the middle and a single legend
+ggsave("ligand_activity_NicheNet_ATAC_48_with_RNA.png", plot = combined_plots, width = 20, height = 20, dpi = 300)
+
+
 ```
 
 
